@@ -45,7 +45,7 @@ async def get_shipping_info_for_product(product_id: str):
     options.add_argument("--start-maximized")
     
     # Headless mode
-    # options.add_argument("--headless")
+    options.add_argument("--headless")
     
     try:
         
