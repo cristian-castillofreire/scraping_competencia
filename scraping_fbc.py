@@ -10,7 +10,7 @@ from selenium_driverless.types.webelement import NoSuchElementException
 
 # Lista de productos
 product_ids = ["118323391", "15643401", "110037565", "138124130", "17287672", "17127319", "15784952", "139603723", "7001702", "17243432"]
-# product_ids = ["110037565"]
+product_ids = ["118323391"]
 
 # Datos cliente
 USER_DATA = {
