@@ -152,8 +152,8 @@ async def get_shipping_info_for_product(product_id: str):
             # Usamos JavaScript para establecer el valor y disparar los eventos de validación
             email = USER_DATA["email"]
             await driver.execute_script(f"arguments[0].value = '{email}';", email_input)
-            await driver.execute_script("arguments[0].dispatchEvent(new Event('input', {{ bubbles: true }}));", email_input)
-            await driver.execute_script("arguments[0].dispatchEvent(new Event('blur'));", email_input) # Simula que el usuario hizo clic fuera
+            await driver.execute_script("arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", email_input)
+            await driver.execute_script("arguments[0].dispatchEvent(new Event('blur'));", email_input)
             print("🟢 Mail ingresado usando execute_script.")
 
             # --- NUEVO PASO DE VERIFICACIÓN ---
