@@ -155,6 +155,7 @@ async def get_shipping_info_for_product(product_id: str):
             await driver.execute_script("arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", email_input)
             await driver.execute_script("arguments[0].dispatchEvent(new Event('blur'));", email_input)
             print("🟢 Mail ingresado usando execute_script.")
+            
 
             # --- NUEVO PASO DE VERIFICACIÓN ---
             entered_text = await email_input.get_attribute('value')
@@ -162,6 +163,10 @@ async def get_shipping_info_for_product(product_id: str):
             if entered_text != USER_DATA["email"]:
                 print("❌ ¡ALERTA! El texto no se ingresó correctamente en el campo de email.")
             # ------------------------------------
+
+            
+            await continue_button.click()
+            print("🟢 Click en 'Continuar'.")
             
             
             #region_dropdown = await driver.find_element(By.XPATH, "//input[@placeholder='Selecciona una región']", timeout=10)
