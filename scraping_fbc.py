@@ -47,8 +47,8 @@ async def get_shipping_info_for_product(product_id: str):
     
     # Headless mode
     options.add_argument("--headless")
-    # options.add_argument("--no-sandbox")
-    # options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
 
     from utils import _parse_date, _comparar_dos_opciones, encontrar_mejor_opcion_segun_reglas
     
