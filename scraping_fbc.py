@@ -1,6 +1,8 @@
 import json
 import re
+# from functools import reduce
 from datetime import datetime
+import pandas as pd
 import asyncio
 import traceback
 from selenium_driverless import webdriver
@@ -10,7 +12,7 @@ from selenium_driverless.types.webelement import NoSuchElementException
 
 # Lista de productos
 product_ids = ["118323391", "15643401", "110037565", "138124130", "17287672", "17127319", "15784952", "139603723", "7001702", "17243432"]
-# product_ids = ["110037565"]
+product_ids = ["118323391", "15643401"]
 
 # Datos cliente
 USER_DATA = {
@@ -46,6 +48,11 @@ async def get_shipping_info_for_product(product_id: str):
     
     # Headless mode
     # options.add_argument("--headless")
+    # options.add_argument("--no-sandbox")
+    # options.add_argument("--disable-dev-shm-usage")
+
+    from utils import _parse_date, _comparar_dos_opciones, encontrar_mejor_opcion_segun_reglas
+    
     
     try:
         
@@ -138,12 +145,23 @@ async def get_shipping_info_for_product(product_id: str):
             await go_to_cart_button.click()
             print("🟢 Click en 'Ir al carro'.")
 
-            continue_purchase_button = await driver.find_element(By.ID, "popover-trigger-14", timeout=10)
-            await continue_purchase_button.click()
-            print("🟢 Click en 'Continuar compra'.")
 
-            email_input = await driver.find_element(By.ID, "testId-Input-email", timeout=10)
-            await email_input.send_keys(USER_DATA["email"])
+            try:
+                continue_purchase_button = await driver.find_element(By.XPATH, "//button[text()='Continuar compra']", timeout=10)
+                await continue_purchase_button.click()
+                print("🟢 Click en 'Continuar compra'.")
+            except NoSuchElementException:
+                continue_purchase_button = await driver.find_element(By.XPATH, "//button[starts-with(@id, 'popover-trigger-')]", timeout=10)
+                await continue_purchase_button.click()
+                print("🟢 Click en 'Continuar compra'.")   
+
+            try:
+                email_input = await driver.find_element(By.ID, "testId-Input-email", timeout=10)
+                await email_input.send_keys(USER_DATA["email"])
+            except NoSuchElementException:
+                selector_email = "input[data-testid='testId-Input-email']"
+                email_input_field = await driver.find_element(By.CSS_SELECTOR, selector_email, timeout=10)
+
             continue_button = await driver.find_element(By.ID, "continueButton", timeout=10)
             await continue_button.click()
             print("🟢 Mail ingresado.")
@@ -254,8 +272,8 @@ async def get_shipping_info_for_product(product_id: str):
                 'ene': 1, 'feb': 2, 'mar': 3, 'abr': 4, 'may': 5, 'jun': 6,
                 'jul': 7, 'ago': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dic': 12
             }
-
             hoy = datetime.now()
+            fecha_actual_str = hoy.strftime('%d/%m/%Y')
 
             def formatear_fecha(tupla_fecha, fecha_referencia):
                 dia_str, mes_str = tupla_fecha
@@ -272,62 +290,92 @@ async def get_shipping_info_for_product(product_id: str):
                 except ValueError:
                     return ""
 
-            # Iterar para cada opción de envío
             for opcion in opciones_de_envio:
                 promesa_texto = opcion.get("promesa_entrega", "")
                 
-                # Inicializamos los campos
                 opcion["specificDate"] = ""
                 opcion["dateRangeLB"] = ""
                 opcion["dateRangeUB"] = ""
 
-                # Rango de fechas
                 if "entre" in promesa_texto.lower():
                     dias = re.findall(r'\b(\d{1,2})\b', promesa_texto)
                     meses_encontrados = re.findall(r'de\s+([a-z]{3})', promesa_texto)
-
-                    # Rango en el mismo mes (2 días, 1 mes)
                     if len(dias) == 2 and len(meses_encontrados) == 1:
                         mes_comun = meses_encontrados[0]
                         opcion["dateRangeLB"] = formatear_fecha((dias[0], mes_comun), hoy)
                         opcion["dateRangeUB"] = formatear_fecha((dias[1], mes_comun), hoy)
-                    
-                    # Rango entre meses distintos (2 días, 2 meses)
                     elif len(dias) == 2 and len(meses_encontrados) == 2:
                         opcion["dateRangeLB"] = formatear_fecha((dias[0], meses_encontrados[0]), hoy)
                         opcion["dateRangeUB"] = formatear_fecha((dias[1], meses_encontrados[1]), hoy)
-
-                # Fecha específica
                 else:
                     match_fecha_especifica = re.search(r"(\d{1,2})\s+de\s+([a-z]{3})", promesa_texto)
                     if match_fecha_especifica:
                         opcion["specificDate"] = formatear_fecha(match_fecha_especifica.groups(), hoy)
 
+            filas_para_excel = []
 
-            # --- Imprime el resultado final ---
-            print("\n--- Resultados: ---")
-            print(f"Compra Internacional en PDP: {pdp_compra_internacional}")
-            print(f"Envio gratis APP en PDP: {pdp_envio_gratis_app}")
-            print(json.dumps(opciones_de_envio, indent=2, ensure_ascii=False))
-
-
-            # Pausa entre elementos -------------------
-            # await asyncio.to_thread(input)
-
-
-
+            if not opciones_de_envio:
+                print(f"🟡 No se encontraron opciones de envío para el producto {product_id}.")
+                filas_para_excel.append({
+                    "product_id": product_id,
+                    "fecha_actual": fecha_actual_str,
+                    "pdp_compra_internacional": pdp_compra_internacional,
+                    "pdp_envio_gratis_app": pdp_envio_gratis_app,
+                    "promesa": "N/A",
+                    "precio": "N/A",
+                    "free_shipping_label": "N/A",
+                    "envio_gratis_app": "N/A",
+                    "specificDate": "",
+                    "dateRangeLB": "",
+                    "dateRangeUB": ""
+                })
+            else:
+                mejor_opcion = encontrar_mejor_opcion_segun_reglas(opciones_de_envio)
+                
+                if mejor_opcion:
+                    fila = {
+                        "product_id": product_id,
+                        "fecha_actual": fecha_actual_str,
+                        "pdp_compra_internacional": pdp_compra_internacional,
+                        "pdp_envio_gratis_app": pdp_envio_gratis_app,
+                        "promesa": mejor_opcion.get("promesa_entrega"),
+                        "precio": mejor_opcion.get("precio_envio"),
+                        "free_shipping_label": mejor_opcion.get("tiene_free_shipping_label"),
+                        "envio_gratis_app": mejor_opcion.get("tiene_envio_gratis_app"),
+                        "specificDate": mejor_opcion.get("specificDate", ""),
+                        "dateRangeLB": mejor_opcion.get("dateRangeLB", ""),
+                        "dateRangeUB": mejor_opcion.get("dateRangeUB", "")
+                    }
+                    filas_para_excel.append(fila)
             
+            print("\n--- Resultados: ---")
+            print(json.dumps(filas_para_excel, indent=2, ensure_ascii=False))
+
+            # Pausa entre productos -------------------
+            # await asyncio.to_thread(input)
+            
+            return filas_para_excel
 
     except Exception as e:
         print(f"❌ Ocurrió un error al procesar el producto {product_id}.")
         print(f"Detalles del error: {e}")
         traceback.print_exc()
         print("---------------------------------------\n")
+        return None 
 
 
 async def main():
+
+    all_products_data = []
+
     for pid in product_ids:
-        await get_shipping_info_for_product(pid)
+        product_data = await get_shipping_info_for_product(pid)
+        if product_data:
+            all_products_data.extend(product_data)
+
+    df = pd.DataFrame(all_products_data)
+    df.to_excel("resultados_scraping.xlsx", index=False)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
