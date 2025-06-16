@@ -151,9 +151,9 @@ async def get_shipping_info_for_product(product_id: str):
                 await continue_purchase_button.click(move_to=True)
                 print("🟢 Click en 'Continuar compra'.")
             except NoSuchElementException:
-                continue_purchase_button = await driver.find_element(By.XPATH, "//button[starts-with(@id, 'popover-trigger-')]", timeout=10)
-                await continue_purchase_button.click(move_to=True)
-                print("🟢 Click en 'Continuar compra'.")   
+                continue_purchase_button = await driver.find_element(By.XPATH, "//button[text()='Continuar compra']", timeout=10)
+                await driver.execute_script("arguments[0].click();", continue_purchase_button)
+                print("🟢 Click en 'Continuar compra'.")
 
             try:
                 email_input = await driver.find_element(By.ID, "testId-Input-email", timeout=10)
@@ -362,7 +362,7 @@ async def get_shipping_info_for_product(product_id: str):
         print(f"Detalles del error: {e}")
         traceback.print_exc()
         print("---------------------------------------\n")
-        return None 
+        return None
 
 
 async def main():
