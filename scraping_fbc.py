@@ -165,6 +165,7 @@ async def get_shipping_info_for_product(product_id: str):
             # ------------------------------------
 
             
+            continue_button = await driver.find_element(By.ID, "continueButton", timeout=10)
             await continue_button.click()
             print("🟢 Click en 'Continuar'.")
             
