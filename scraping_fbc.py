@@ -10,7 +10,7 @@ from selenium_driverless.types.webelement import NoSuchElementException
 
 # Lista de productos
 product_ids = ["118323391", "15643401", "110037565", "138124130", "17287672", "17127319", "15784952", "139603723", "7001702", "17243432"]
-product_ids = ["118323391"]
+# product_ids = ["110037565"]
 
 # Datos cliente
 USER_DATA = {
@@ -45,9 +45,7 @@ async def get_shipping_info_for_product(product_id: str):
     options.add_argument("--start-maximized")
     
     # Headless mode
-    options.add_argument("--headless")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
+    # options.add_argument("--headless")
     
     try:
         
@@ -144,73 +142,18 @@ async def get_shipping_info_for_product(product_id: str):
             await continue_purchase_button.click()
             print("🟢 Click en 'Continuar compra'.")
 
-            
-
             email_input = await driver.find_element(By.ID, "testId-Input-email", timeout=10)
-            #await email_input.send_keys(USER_DATA["email"])
-            #continue_button = await driver.find_element(By.ID, "continueButton", timeout=10)
-            #await continue_button.click()
-            #print("🟢 Mail ingresado.")
-            # Usamos JavaScript para establecer el valor y disparar los eventos de validación
-            email = USER_DATA["email"]
-            #await driver.execute_script(f"arguments[0].value = '{email}';", email_input)
-            #await driver.execute_script("arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", email_input)
-            #await driver.execute_script("arguments[0].dispatchEvent(new Event('blur'));", email_input)
-            #print("🟢 Mail ingresado usando execute_script.")
-            
-            for character in email:
-                await email_input.send_keys(character)
-                await asyncio.sleep(0.05) # Pequeña pausa de 50ms entre cada caracter
-
-            print("🟢 Simulación de escritura completada.")
-            
-
-            # --- NUEVO PASO DE VERIFICACIÓN ---
-            entered_text = await email_input.get_attribute('value')
-            print(f"🔎 Texto encontrado en el campo: '{entered_text}'")
-            if entered_text != USER_DATA["email"]:
-                print("❌ ¡ALERTA! El texto no se ingresó correctamente en el campo de email.")
-            # ------------------------------------
-
-            
+            await email_input.send_keys(USER_DATA["email"])
             continue_button = await driver.find_element(By.ID, "continueButton", timeout=10)
-            #await continue_button.click()
-            await driver.execute_script("arguments[0].click();", continue_button)
-            print("🟢 Click en 'Continuar'.")
+            await continue_button.click()
+            print("🟢 Mail ingresado.")
             
-            
-            #region_dropdown = await driver.find_element(By.XPATH, "//input[@placeholder='Selecciona una región']", timeout=10)
-            #await region_dropdown.click()
-            #region_option = await driver.find_element(By.XPATH, f"//button[contains(., '{USER_DATA['region']}')]", timeout=10)
-            #await region_option.click()
-            #print(f"🟢 Región seleccionada: {USER_DATA['region']}.")
+            region_dropdown = await driver.find_element(By.XPATH, "//input[@placeholder='Selecciona una región']", timeout=10)
+            await region_dropdown.click()
+            region_option = await driver.find_element(By.XPATH, f"//button[contains(., '{USER_DATA['region']}')]", timeout=10)
+            await region_option.click()
+            print(f"🟢 Región seleccionada: {USER_DATA['region']}.")
 
-            # ****************************************************************************
-            print("⏳ Dando tiempo a que cargue el formulario de dirección...")
-            await asyncio.sleep(5) 
-
-            try:
-                print("🕵️ Buscando el dropdown de Región...")
-                region_dropdown = await driver.find_element(By.XPATH, "//input[@placeholder='Selecciona una región']", timeout=10)
-                await region_dropdown.click()
-                region_option = await driver.find_element(By.XPATH, f"//button[contains(., '{USER_DATA['region']}')]", timeout=10)
-                await region_option.click()
-                print(f"🟢 Región seleccionada: {USER_DATA['region']}.")
-            
-            except Exception as e:
-                print("❌ ERROR: No se pudo encontrar o interactuar con el dropdown de Región.")
-                
-                # --- PASO DE DEBUGGING CRÍTICO ---
-                print("📸 Guardando captura de pantalla y HTML para análisis...")
-                await driver.save_screenshot("debug_direccion.png")
-                page_source = await driver.page_source
-                with open("debug_direccion.html", "w", encoding="utf-8") as f:
-                    f.write(page_source)
-                print("✅ Evidencia guardada.")
-                raise e # Vuelve a lanzar el error para detener el script
-            # ****************************************************************************
-
-        
             comuna_dropdown = await driver.find_element(By.XPATH, "//input[@placeholder='Selecciona una comuna']", timeout=10)
             await comuna_dropdown.click()
             comuna_option = await driver.find_element(By.XPATH, f"//button[contains(., '{USER_DATA['comuna']}')]", timeout=10)
