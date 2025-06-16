@@ -3,6 +3,7 @@ from datetime import datetime
 from functools import reduce
 
 
+
 # FUNCIONES PARA ELEGIR LA MEJOR FECHA ----------------------------------------
 # -----------------------------------------------------------------------------
 # FUNCIÓN 1: Ayudante para convertir strings de fecha a objetos datetime

@@ -1,6 +1,5 @@
 import json
 import re
-# from functools import reduce
 from datetime import datetime
 import pandas as pd
 import asyncio
@@ -12,7 +11,7 @@ from selenium_driverless.types.webelement import NoSuchElementException
 
 # Lista de productos
 product_ids = ["118323391", "15643401", "110037565", "138124130", "17287672", "17127319", "15784952", "139603723", "7001702", "17243432"]
-product_ids = ["118323391", "15643401"]
+# product_ids = ["118323391"]
 
 # Datos cliente
 USER_DATA = {
@@ -47,7 +46,7 @@ async def get_shipping_info_for_product(product_id: str):
     options.add_argument("--start-maximized")
     
     # Headless mode
-    # options.add_argument("--headless")
+    options.add_argument("--headless")
     # options.add_argument("--no-sandbox")
     # options.add_argument("--disable-dev-shm-usage")
 
@@ -58,6 +57,7 @@ async def get_shipping_info_for_product(product_id: str):
         
         async with webdriver.Chrome(options=options) as driver:
 
+            
             await driver.get(f"https://www.falabella.com/falabella-cl/product/{product_id}", wait_load=True)
             print(f"🟢 Página de producto {product_id} cargada.")
 
@@ -123,7 +123,7 @@ async def get_shipping_info_for_product(product_id: str):
 
             if variant_selected:
                 go_to_cart_button = await driver.find_element(By.ID, "add-to-cart-button-lightbox", timeout=10)
-                await go_to_cart_button.click()
+                await driver.execute_script("arguments[0].click();", go_to_cart_button)
                 print("🟢 Click en 'Agregar al Carro'.")
 
 
@@ -142,28 +142,28 @@ async def get_shipping_info_for_product(product_id: str):
                 pass
 
             go_to_cart_button = await driver.find_element(By.ID, "linkButton", timeout=10)
-            await go_to_cart_button.click()
+            await driver.execute_script("arguments[0].click();", go_to_cart_button)
             print("🟢 Click en 'Ir al carro'.")
 
 
             try:
                 continue_purchase_button = await driver.find_element(By.XPATH, "//button[text()='Continuar compra']", timeout=10)
-                await continue_purchase_button.click()
+                await continue_purchase_button.click(move_to=True)
                 print("🟢 Click en 'Continuar compra'.")
             except NoSuchElementException:
                 continue_purchase_button = await driver.find_element(By.XPATH, "//button[starts-with(@id, 'popover-trigger-')]", timeout=10)
-                await continue_purchase_button.click()
+                await continue_purchase_button.click(move_to=True)
                 print("🟢 Click en 'Continuar compra'.")   
 
             try:
                 email_input = await driver.find_element(By.ID, "testId-Input-email", timeout=10)
                 await email_input.send_keys(USER_DATA["email"])
             except NoSuchElementException:
-                selector_email = "input[data-testid='testId-Input-email']"
-                email_input_field = await driver.find_element(By.CSS_SELECTOR, selector_email, timeout=10)
+                email_input = await driver.find_element(By.CSS_SELECTOR, "input[data-testid='testId-Input-email']", timeout=1000)
+                await email_input.send_keys(USER_DATA["email"])
 
             continue_button = await driver.find_element(By.ID, "continueButton", timeout=10)
-            await continue_button.click()
+            await continue_button.click(move_to=True)
             print("🟢 Mail ingresado.")
             
             region_dropdown = await driver.find_element(By.XPATH, "//input[@placeholder='Selecciona una región']", timeout=10)
@@ -185,13 +185,13 @@ async def get_shipping_info_for_product(product_id: str):
             number_input = await driver.find_element(By.ID, "testId-Input-number", timeout=10)
             await number_input.send_keys(USER_DATA["numero"])
             print(f"🟢 Número: {USER_DATA['numero']}.")
-           
+        
             confirm_address_button = await driver.find_element(By.ID, "testId-infoModalFooter-button", timeout=10)
             await driver.execute_script("arguments[0].click();", confirm_address_button)
             print("🟢 Click en 'Confirmar dirección'.")
 
             save_address_button = await driver.find_element(By.XPATH, "//button[contains(., 'Confirmar y Guardar')]", timeout=10)            
-            await save_address_button.click()
+            await driver.execute_script("arguments[0].click();", save_address_button)
             print("🟢 Click en 'Confirmar y Guardar'.")
 
             print("⏳ Esperando a que cargue la opción 'Envío a domicilio'...")
@@ -355,6 +355,7 @@ async def get_shipping_info_for_product(product_id: str):
             # await asyncio.to_thread(input)
             
             return filas_para_excel
+            
 
     except Exception as e:
         print(f"❌ Ocurrió un error al procesar el producto {product_id}.")
