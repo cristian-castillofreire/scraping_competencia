@@ -18,7 +18,15 @@ jobs:
       - name: Install Google Chrome dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libglib2.0-0 libnss3 libgconf-2-4 libfontconfig1 libx11-6 libx11-xcb1 libxcb-dri3-0 libxcb1 libxcomposite1 libxdamage1 libxext6 libxfixes3 libxrandr2 libxtst6 libcups2 libgbm1 libpangocairo-1.0-0 libpango-1.0-0 libasound2 libatk1.0-0 libatk-bridge2.0-0 libgtk-3-0
+          sudo apt-get install -y \
+            libnss3 \
+            libdbus-glib-1-2 \
+            libgtk-3-0 \
+            libx11-xcb1 \
+            libasound2t64 \
+            libxtst6 \
+            libxss1 \
+            libgbm1
         
       - name: Set up Python
         uses: actions/setup-python@v5
