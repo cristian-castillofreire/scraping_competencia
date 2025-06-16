@@ -150,12 +150,38 @@ async def get_shipping_info_for_product(product_id: str):
             await continue_button.click()
             print("🟢 Mail ingresado.")
             
-            region_dropdown = await driver.find_element(By.XPATH, "//input[@placeholder='Selecciona una región']", timeout=10)
-            await region_dropdown.click()
-            region_option = await driver.find_element(By.XPATH, f"//button[contains(., '{USER_DATA['region']}')]", timeout=10)
-            await region_option.click()
-            print(f"🟢 Región seleccionada: {USER_DATA['region']}.")
+            #region_dropdown = await driver.find_element(By.XPATH, "//input[@placeholder='Selecciona una región']", timeout=10)
+            #await region_dropdown.click()
+            #region_option = await driver.find_element(By.XPATH, f"//button[contains(., '{USER_DATA['region']}')]", timeout=10)
+            #await region_option.click()
+            #print(f"🟢 Región seleccionada: {USER_DATA['region']}.")
 
+            # ****************************************************************************
+            print("⏳ Dando tiempo a que cargue el formulario de dirección...")
+            await asyncio.sleep(5) 
+
+            try:
+                print("🕵️ Buscando el dropdown de Región...")
+                region_dropdown = await driver.find_element(By.XPATH, "//input[@placeholder='Selecciona una región']", timeout=10)
+                await region_dropdown.click()
+                region_option = await driver.find_element(By.XPATH, f"//button[contains(., '{USER_DATA['region']}')]", timeout=10)
+                await region_option.click()
+                print(f"🟢 Región seleccionada: {USER_DATA['region']}.")
+            
+            except Exception as e:
+                print("❌ ERROR: No se pudo encontrar o interactuar con el dropdown de Región.")
+                
+                # --- PASO DE DEBUGGING CRÍTICO ---
+                print("📸 Guardando captura de pantalla y HTML para análisis...")
+                await driver.save_screenshot("debug_direccion.png")
+                page_source = await driver.page_source
+                with open("debug_direccion.html", "w", encoding="utf-8") as f:
+                    f.write(page_source)
+                print("✅ Evidencia guardada.")
+                raise e # Vuelve a lanzar el error para detener el script
+            # ****************************************************************************
+
+        
             comuna_dropdown = await driver.find_element(By.XPATH, "//input[@placeholder='Selecciona una comuna']", timeout=10)
             await comuna_dropdown.click()
             comuna_option = await driver.find_element(By.XPATH, f"//button[contains(., '{USER_DATA['comuna']}')]", timeout=10)
