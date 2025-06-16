@@ -144,11 +144,11 @@ async def get_shipping_info_for_product(product_id: str):
             await continue_purchase_button.click()
             print("🟢 Click en 'Continuar compra'.")
 
-            #email_input = await driver.find_element(By.ID, "testId-Input-email", timeout=10)
-            #await email_input.send_keys(USER_DATA["email"])
-            #continue_button = await driver.find_element(By.ID, "continueButton", timeout=10)
-            #await continue_button.click()
-            #print("🟢 Mail ingresado.")
+            email_input = await driver.find_element(By.ID, "testId-Input-email", timeout=10)
+            await email_input.send_keys(USER_DATA["email"])
+            continue_button = await driver.find_element(By.ID, "continueButton", timeout=10)
+            await continue_button.click()
+            print("🟢 Mail ingresado.")
 
             # --- NUEVO PASO DE VERIFICACIÓN ---
             entered_text = await email_input.get_attribute('value')
