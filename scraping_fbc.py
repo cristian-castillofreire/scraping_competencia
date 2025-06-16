@@ -46,6 +46,8 @@ async def get_shipping_info_for_product(product_id: str):
     
     # Headless mode
     options.add_argument("--headless")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
     
     try:
         
