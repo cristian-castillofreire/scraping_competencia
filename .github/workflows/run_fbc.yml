@@ -44,18 +44,3 @@ jobs:
       - name: Run Scraping FBC
         run: python scraping_fbc.py
 
-
-      - name: Commit final state
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          
-          if ! git diff --quiet; then
-            echo "✅ Changes detected. Committing final state..."
-            git add img/
-            git commit -m "Cambio debugging"
-            git push
-            
-          else
-            echo "✅ No changes detected in the directory. Nothing to commit."
-          fi
