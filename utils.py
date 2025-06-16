@@ -1,8 +1,70 @@
-
 from datetime import datetime
 from functools import reduce
+import asyncio
+from selenium_driverless.types.by import By
 
+# Asegúrate de tener tu objeto 'driver' o 'tab' inicializado.
 
+async def hacer_clic_y_verificar_cambio_url(driver, by, value, element_description='el elemento', target_url = '', max_retries=3):
+    """
+    Busca un elemento usando un selector, le hace clic y verifica si la URL cambia.
+    Si no cambia, refresca la página y lo reintenta hasta un máximo de veces.
+
+    :param driver: La instancia del navegador o pestaña de driverless (ej. 'tab').
+    :param by: El método de selección del elemento (ej. By.XPATH, By.ID).
+    :param value: El valor del selector (ej. "//button[@id='buy']").
+    :param element_description: Una descripción opcional del elemento para mensajes más claros.
+    :param max_retries: El número máximo de intentos.
+    :return: True si el clic fue exitoso y la URL cambió, False en caso contrario.
+    """
+    for intento in range(max_retries):
+        if intento > 0:
+            print(f"🟢 Intento {intento + 1} de {max_retries} para hacer clic en '{element_description}' ---")
+        try:           
+
+            # 2. Encontrar y hacer clic en el elemento (usando los parámetros)
+            elemento = await driver.find_element(by, value, timeout=10)
+            await elemento.click(move_to=True)
+            print(f"🟢 Click en '{element_description}'.")
+
+            # 3. Esperar a que la URL cambie (con un tiempo de espera)
+            tiempo_inicio = asyncio.get_event_loop().time()
+            current_url = await driver.current_url
+            
+            while current_url != target_url:
+                transcurrido = asyncio.get_event_loop().time() - tiempo_inicio
+                if transcurrido > 10:
+                    print(f"🔴 Tiempo de espera de {10}s agotado. La URL no cambió.")
+                    break
+                current_url = await driver.current_url
+            
+            print(f"URL después del clic: {current_url}")
+
+            # 4. Verificar si la URL cambió
+            if current_url == target_url:
+                print(f"✅ ¡Éxito! La URL ha cambiado correctamente tras el clic en '{element_description}'.")
+                return True  # Salimos de la función con éxito
+            
+            # 5. Si la URL no cambió y no es el último intento, refrescar
+            print("🟡 La URL no cambió en este intento.")
+            if intento < max_retries - 1:
+                print("Refrescando la página para reintentar...")
+                await driver.refresh()
+                await asyncio.sleep(3) # Esperar un poco a que la página cargue tras el refresco
+
+        except Exception as e:
+            print(f"🔴 Ocurrió un error en el intento {intento + 1} al interactuar con '{element_description}': {e}")
+            if intento < max_retries - 1:
+                print("Refrescando la página para reintentar...")
+                try:
+                    await driver.refresh()
+                    await asyncio.sleep(3)
+                except Exception as refresh_error:
+                    print(f"🔴 No se pudo refrescar la página: {refresh_error}")
+                    break # Si no se puede refrescar, no tiene sentido seguir
+
+    print(f"\n🔴 Se alcanzó el número máximo de reintentos sin éxito para '{element_description}'.")
+    return False
 
 # FUNCIONES PARA ELEGIR LA MEJOR FECHA ----------------------------------------
 # -----------------------------------------------------------------------------

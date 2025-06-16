@@ -10,8 +10,8 @@ from selenium_driverless.types.webelement import WebElement
 from selenium_driverless.types.webelement import NoSuchElementException
 
 # Lista de productos
-# product_ids = ["118323391", "15643401", "110037565", "138124130", "17287672", "17127319", "15784952", "139603723", "7001702", "17243432"]
-product_ids = ["118323391"]
+product_ids = ["118323391", "15643401", "110037565", "138124130", "17287672", "17127319", "15784952", "139603723", "7001702", "17243432"]
+# product_ids = ["118323391"]
 
 # Datos cliente
 USER_DATA = {
@@ -26,7 +26,7 @@ USER_DATA = {
 
 async def get_shipping_info_for_product(product_id: str):
 
-    print(f"--- Processing Product ID: {product_id} ---")
+    print(f"\n--- Procesando Product ID: {product_id} ---")
     
     options = webdriver.ChromeOptions()
     
@@ -50,7 +50,7 @@ async def get_shipping_info_for_product(product_id: str):
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
 
-    from utils import _parse_date, _comparar_dos_opciones, encontrar_mejor_opcion_segun_reglas
+    from utils import _parse_date, _comparar_dos_opciones, encontrar_mejor_opcion_segun_reglas, hacer_clic_y_verificar_cambio_url
     
     
     try:
@@ -82,7 +82,7 @@ async def get_shipping_info_for_product(product_id: str):
                 await add_to_cart_button.click(move_to=True)
                 print("🟢 Click en 'Agregar al carro'.")
             
-            except Exception as e:
+            except NoSuchElementException:
                 print("🔄 Intentando actualizar la página (F5)...") 
                 await driver.refresh()
 
@@ -146,14 +146,16 @@ async def get_shipping_info_for_product(product_id: str):
             print("🟢 Click en 'Ir al carro'.")
 
 
-            try:
-                continue_purchase_button = await driver.find_element(By.XPATH, "//button[text()='Continuar compra']", timeout=10)
-                await continue_purchase_button.click(move_to=True)
-                print("🟢 Click en 'Continuar compra'.")
-            except NoSuchElementException:
-                continue_purchase_button = await driver.find_element(By.XPATH, "//button[text()='Continuar compra']", timeout=10)
-                await driver.execute_script("arguments[0].click();", continue_purchase_button)
-                print("🟢 Click en 'Continuar compra'.")
+            # try:
+            #     continue_purchase_button = await driver.find_element(By.XPATH, "//button[text()='Continuar compra']", timeout=10)
+            #     await continue_purchase_button.click(move_to=True)
+            #     print("🟢 Click en 'Continuar compra'.")
+            # except NoSuchElementException:
+            #     continue_purchase_button = await driver.find_element(By.XPATH, "//button[text()='Continuar compra']", timeout=10)
+            #     await driver.execute_script("arguments[0].click();", continue_purchase_button)
+            #     print("🟢 Click en 'Continuar compra'.")
+
+            continue_purchase_button = await hacer_clic_y_verificar_cambio_url(driver=driver, by=By.XPATH, value="//button[text()='Continuar compra']", target_url = 'https://www.falabella.com/falabella-cl/checkout/delivery',  element_description="Continuar compra")
 
             try:
                 email_input = await driver.find_element(By.ID, "testId-Input-email", timeout=10)
