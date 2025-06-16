@@ -10,8 +10,8 @@ from selenium_driverless.types.webelement import WebElement
 from selenium_driverless.types.webelement import NoSuchElementException
 
 # Lista de productos
-product_ids = ["118323391", "15643401", "110037565", "138124130", "17287672", "17127319", "15784952", "139603723", "7001702", "17243432"]
-# product_ids = ["118323391"]
+# product_ids = ["118323391", "15643401", "110037565", "138124130", "17287672", "17127319", "15784952", "139603723", "7001702", "17243432"]
+product_ids = ["118323391"]
 
 # Datos cliente
 USER_DATA = {
@@ -159,7 +159,7 @@ async def get_shipping_info_for_product(product_id: str):
                 email_input = await driver.find_element(By.ID, "testId-Input-email", timeout=10)
                 await email_input.send_keys(USER_DATA["email"])
             except NoSuchElementException:
-                email_input = await driver.find_element(By.CSS_SELECTOR, "input[data-testid='testId-Input-email']", timeout=1000)
+                email_input = await driver.find_element(By.CSS_SELECTOR, "input[data-testid='testId-Input-email']", timeout=10)
                 await email_input.send_keys(USER_DATA["email"])
 
             continue_button = await driver.find_element(By.ID, "continueButton", timeout=10)
