@@ -145,10 +145,16 @@ async def get_shipping_info_for_product(product_id: str):
             print("🟢 Click en 'Continuar compra'.")
 
             email_input = await driver.find_element(By.ID, "testId-Input-email", timeout=10)
-            await email_input.send_keys(USER_DATA["email"])
-            continue_button = await driver.find_element(By.ID, "continueButton", timeout=10)
-            await continue_button.click()
-            print("🟢 Mail ingresado.")
+            #await email_input.send_keys(USER_DATA["email"])
+            #continue_button = await driver.find_element(By.ID, "continueButton", timeout=10)
+            #await continue_button.click()
+            #print("🟢 Mail ingresado.")
+            # Usamos JavaScript para establecer el valor y disparar los eventos de validación
+            email = USER_DATA["email"]
+            await driver.execute_script(f"arguments[0].value = '{email}';", email_input)
+            await driver.execute_script("arguments[0].dispatchEvent(new Event('input', {{ bubbles: true }}));", email_input)
+            await driver.execute_script("arguments[0].dispatchEvent(new Event('blur'));", email_input) # Simula que el usuario hizo clic fuera
+            print("🟢 Mail ingresado usando execute_script.")
 
             # --- NUEVO PASO DE VERIFICACIÓN ---
             entered_text = await email_input.get_attribute('value')
