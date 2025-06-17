@@ -197,7 +197,9 @@ async def get_shipping_info_for_product(product_id: str):
 
             # ----------------------------------------------------------------------------------------------------------------------------------
             
-            await driver.refresh()
+            # await driver.refresh()
+            await asyncio.sleep(30)
+            
 
             # ------------------ Debug ------------------
             print("📸 Guardando screenshot")
