@@ -8,7 +8,7 @@ from selenium_driverless import webdriver
 from selenium_driverless.types.by import By
 from selenium_driverless.types.webelement import WebElement
 from selenium_driverless.types.webelement import NoSuchElementException
-from utils import encontrar_mejor_shipping, click_verificado_url, send_keys_verificado, click_verificado_elemento, click_con_reintentos
+from utils import encontrar_mejor_shipping, click_verificado_url, click_verificado_elemento, click_con_reintentos, send_keys_verificado
 import warnings
 warnings.filterwarnings("ignore", message="got execution_context_id and unique_context=True, defaulting to execution_context_id")
 
