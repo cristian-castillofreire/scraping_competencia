@@ -168,7 +168,7 @@ async def get_shipping_info_for_product(product_id: str):
 
             elemento_verificador = await driver.find_element(By.XPATH, "//input[@placeholder='Selecciona una región']", timeout=10)
             texto_verificador = await elemento_verificador.get_attribute('value')
-            print(texto_verificador)
+            print(f"🟣 Texto verificado: {texto_verificador}")
 
             #------------------------
 
@@ -180,7 +180,7 @@ async def get_shipping_info_for_product(product_id: str):
 
             elemento_verificador = await driver.find_element(By.XPATH, "//input[@placeholder='Selecciona una comuna']", timeout=10)
             texto_verificador = await elemento_verificador.get_attribute('value')
-            print(texto_verificador)
+            print(f"🟣 Texto verificado: {texto_verificador}")
 
             #------------------------
 
@@ -191,7 +191,7 @@ async def get_shipping_info_for_product(product_id: str):
 
             elemento_verificador = await driver.find_element(By.ID, "testId-Input-street", timeout=10)
             texto_verificador = await elemento_verificador.get_attribute('value')
-            print(texto_verificador)
+            print(f"🟣 Texto verificado: {texto_verificador}")
 
             #------------------------
 
@@ -202,7 +202,7 @@ async def get_shipping_info_for_product(product_id: str):
 
             elemento_verificador = await driver.find_element(By.ID, "testId-Input-number", timeout=10)
             texto_verificador = await elemento_verificador.get_attribute('value')
-            print(texto_verificador)
+            print(f"🟣 Texto verificado: {texto_verificador}")
         
 
             # 🟢 Confirmar dirección
