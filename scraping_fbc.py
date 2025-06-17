@@ -196,6 +196,17 @@ async def get_shipping_info_for_product(product_id: str):
                                       click_normal = False)
 
             # ----------------------------------------------------------------------------------------------------------------------------------
+            print(f"📸 Guardando captura de pantalla en '{f"debug_screenshot_{product_id}.png"}'...")
+            await driver.save_screenshot(f"debug_screenshot_{product_id}.png")
+            print(f"✅ Captura de pantalla guardada.")
+            
+            print(f"📄 Guardando HTML en '{f"debug_page_{product_id}.html"}'...")
+            page_source = await driver.page_source
+            with open(f"debug_page_{product_id}.html", "w", encoding="utf-8") as f:
+                f.write(page_source)
+            print(f"✅ HTML guardado.")
+
+            # ----------------------------------------------------------------------------------------------------------------------------------
 
             print("⏳ Esperando a que cargue la opción 'Envío a domicilio'...")
             await driver.find_element(By.XPATH, '//p[contains(normalize-space(), "Envío a domicilio")]', timeout=10)
