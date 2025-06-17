@@ -166,36 +166,47 @@ async def get_shipping_info_for_product(product_id: str):
 
             exito_al_ingresar_mail = await ingresar_email_y_verificar(driver, USER_DATA["email"])
             
+            await asyncio.sleep(5) 
             
 
             region_dropdown = await driver.find_element(By.XPATH, "//input[@placeholder='Selecciona una región']", timeout=10)
             await region_dropdown.click()
+            await asyncio.sleep(5) 
             region_option = await driver.find_element(By.XPATH, f"//button[contains(., '{USER_DATA['region']}')]", timeout=10)
             await region_option.click()
+            await asyncio.sleep(5) 
             print(f"🟢 Región seleccionada: {USER_DATA['region']}.")
 
             comuna_dropdown = await driver.find_element(By.XPATH, "//input[@placeholder='Selecciona una comuna']", timeout=10)
             await comuna_dropdown.click()
+            await asyncio.sleep(5) 
             comuna_option = await driver.find_element(By.XPATH, f"//button[contains(., '{USER_DATA['comuna']}')]", timeout=10)
             await comuna_option.click()
+            await asyncio.sleep(5) 
             print(f"🟢 Comuna seleccionada: {USER_DATA['comuna']}.")
 
             street_input = await driver.find_element(By.ID, "testId-Input-street", timeout=10)
             await street_input.clear()
+            await asyncio.sleep(5) 
             await street_input.send_keys(USER_DATA['calle'])
+            await asyncio.sleep(5) 
             print(f"🟢 Calle ingresada: {USER_DATA['calle']}.")
             
             number_input = await driver.find_element(By.ID, "testId-Input-number", timeout=10)
             await number_input.clear()
+            await asyncio.sleep(5) 
             await number_input.send_keys(USER_DATA["numero"])
+            await asyncio.sleep(5) 
             print(f"🟢 Número: {USER_DATA['numero']}.")
         
             confirm_address_button = await driver.find_element(By.ID, "testId-infoModalFooter-button", timeout=10)
             await driver.execute_script("arguments[0].click();", confirm_address_button)
+            await asyncio.sleep(5) 
             print("🟢 Click en 'Confirmar dirección'.")
 
             save_address_button = await driver.find_element(By.XPATH, "//button[contains(., 'Confirmar y Guardar')]", timeout=10)            
             await driver.execute_script("arguments[0].click();", save_address_button)
+            await asyncio.sleep(5) 
             print("🟢 Click en 'Confirmar y Guardar'.")
 
             print("⏳ Esperando a que cargue la opción 'Envío a domicilio'...")
