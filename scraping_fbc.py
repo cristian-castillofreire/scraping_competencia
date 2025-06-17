@@ -50,7 +50,7 @@ async def get_shipping_info_for_product(product_id: str):
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
 
-    from utils import _parse_date, _comparar_dos_opciones, encontrar_mejor_opcion_segun_reglas, hacer_clic_y_verificar_cambio_url
+    from utils import _parse_date, _comparar_dos_opciones, encontrar_mejor_opcion_segun_reglas, hacer_clic_y_verificar_cambio_url, ingresar_email_y_verificar
     
     
     try:
@@ -157,17 +157,17 @@ async def get_shipping_info_for_product(product_id: str):
 
             continue_purchase_button = await hacer_clic_y_verificar_cambio_url(driver=driver, by=By.XPATH, value="//button[text()='Continuar compra']", target_url = 'https://www.falabella.com/falabella-cl/checkout/delivery',  element_description="Continuar compra")
 
-            try:
-                email_input = await driver.find_element(By.ID, "testId-Input-email", timeout=10)
-                await email_input.send_keys(USER_DATA["email"])
-            except NoSuchElementException:
-                email_input = await driver.find_element(By.CSS_SELECTOR, "input[data-testid='testId-Input-email']", timeout=10)
-                await email_input.send_keys(USER_DATA["email"])
-
-            continue_button = await driver.find_element(By.ID, "continueButton", timeout=10)
-            await continue_button.click(move_to=True)
-            print("🟢 Mail ingresado.")
             
+            # email_input = await driver.find_element(By.ID, "testId-Input-email", timeout=10)
+            # await email_input.send_keys(USER_DATA["email"])
+            # continue_button = await driver.find_element(By.ID, "continueButton", timeout=10)
+            # await continue_button.click(move_to=True)
+            # print("🟢 Mail ingresado.")
+
+            exito_al_ingresar_mail = await ingresar_email_y_verificar(driver, USER_DATA["email"])
+            
+            
+
             region_dropdown = await driver.find_element(By.XPATH, "//input[@placeholder='Selecciona una región']", timeout=10)
             await region_dropdown.click()
             region_option = await driver.find_element(By.XPATH, f"//button[contains(., '{USER_DATA['region']}')]", timeout=10)

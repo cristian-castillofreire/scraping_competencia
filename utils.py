@@ -3,7 +3,67 @@ from functools import reduce
 import asyncio
 from selenium_driverless.types.by import By
 
-# Asegúrate de tener tu objeto 'driver' o 'tab' inicializado.
+
+
+async def ingresar_email_y_verificar(driver, email, max_retries=3):
+    """
+    Introduce un email, hace clic en continuar y verifica que el formulario avance.
+    Usa find_elements para evitar manejar la excepción TimeoutException.
+
+    :param driver: La instancia de la pestaña de driverless (ej. 'tab').
+    :param email: El correo electrónico a ingresar.
+    :param max_retries: El número máximo de intentos.
+    :return: True si el formulario avanzó con éxito, False en caso contrario.
+    """
+    error_text_xpath = "//p[text()='Ingresa tu correo electrónico para continuar']"
+
+    for intento in range(max_retries):
+        if intento > 0:
+            print(f"🟢 Intento {intento + 1} de {max_retries} ---")
+
+        try:
+            # 1. Localizar elementos y ejecutar acciones
+            email_input = await driver.find_element(By.ID, "testId-Input-email", timeout=10)
+            await email_input.clear()
+            await email_input.send_keys(email)
+            
+            continue_button = await driver.find_element(By.ID, "continueButton", timeout=10)
+            await continue_button.click(move_to=True)
+            print("🟢 Email ingresado y clic en 'Continuar'.")
+
+            # 2. Esperar brevemente a que la página reaccione
+            await asyncio.sleep(2) 
+
+            # 3. VERIFICACIÓN MODIFICADA: Usamos find_elements
+            # Buscamos el texto de error. La búsqueda no causará un error si no lo encuentra.
+            elementos_error = await driver.find_elements(By.XPATH, error_text_xpath)
+
+            # Verificamos si la lista de elementos está vacía.
+            if len(elementos_error) == 0:
+                # Lista vacía = no se encontró el texto de error = ¡ÉXITO!
+                print("✅ ¡Éxito! El formulario avanzó y el texto de error desapareció.")
+                return True
+            else:
+                # La lista tiene elementos = se encontró el texto de error = FALLO.
+                print("🟡 El formulario no avanzó. El texto de error sigue presente.")
+                if intento < max_retries - 1:
+                    print("Refrescando la página para el siguiente intento...")
+                    await driver.refresh()
+                    await asyncio.sleep(3) # Espera post-refresco
+                
+        except Exception as e:
+            # Este 'except' general sigue siendo útil para otros errores inesperados
+            # (ej. no encontrar el botón 'continueButton', etc.)
+            print(f"🔴 Ocurrió un error inesperado en el intento {intento + 1}: {e}")
+            if intento < max_retries - 1:
+                print("Refrescando la página para reintentar...")
+                await driver.refresh()
+                await asyncio.sleep(3)
+
+    print(f"\n🔴 No se pudo avanzar en el formulario después de {max_retries} intentos.")
+    return False
+
+
 
 async def hacer_clic_y_verificar_cambio_url(driver, by, value, element_description='el elemento', target_url = '', max_retries=3):
     """
