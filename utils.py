@@ -35,7 +35,8 @@ async def click_verificado_seleccion(driver, by, element, by_verifier, verifier_
                 print("🟡 Problema al ingresar el texto.")
                 if intento < max_retries - 1:
                     print("➡️ Refrescando la página para reintentar.")
-                    await driver.refresh()
+                    if auto_refresh:
+                        await driver.refresh()
                 
         except Exception as e:
             print(f"🔴 Ocurrió un error inesperado: {e}")
@@ -104,7 +105,8 @@ async def send_keys_verificado(driver, by, element, input_text, element_descript
                 print("🟡 Problema al ingresar el texto.")
                 if intento < max_retries - 1:
                     print("➡️ Refrescando la página para reintentar.")
-                    await driver.refresh()
+                    if auto_refresh:
+                        await driver.refresh()
                 
         except Exception as e:
             print(f"🔴 Ocurrió un error inesperado: {e}")
@@ -149,7 +151,8 @@ async def click_verificado_elemento(driver, by, element, by_verifier, verifier_e
                 print("🟡 El proceso no avanzó.")
                 if intento < max_retries - 1:
                     print("➡️ Refrescando la página para reintentar.")
-                    await driver.refresh()
+                    if auto_refresh:
+                        await driver.refresh()
 
         except Exception as e:
             print(f"🔴 Ocurrió un error inesperado': {e}")
