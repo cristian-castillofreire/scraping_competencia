@@ -166,21 +166,43 @@ async def get_shipping_info_for_product(product_id: str):
             await region_option.click()
             print(f"🟢 Región seleccionada: {USER_DATA['region']}.")
 
+            elemento_verificador = await driver.find_element(By.XPATH, "//input[@placeholder='Selecciona una región']", timeout=10)
+            texto_verificador = await elemento_verificador.get_attribute('value')
+            print(texto_verificador)
+
+            #------------------------
+
             comuna_dropdown = await driver.find_element(By.XPATH, "//input[@placeholder='Selecciona una comuna']", timeout=10)
             await comuna_dropdown.click()
             comuna_option = await driver.find_element(By.XPATH, f"//button[contains(., '{USER_DATA['comuna']}')]", timeout=10)
             await comuna_option.click()
             print(f"🟢 Comuna seleccionada: {USER_DATA['comuna']}.")
 
+            elemento_verificador = await driver.find_element(By.XPATH, "//input[@placeholder='Selecciona una comuna']", timeout=10)
+            texto_verificador = await elemento_verificador.get_attribute('value')
+            print(texto_verificador)
+
+            #------------------------
+
             street_input = await driver.find_element(By.ID, "testId-Input-street", timeout=10)
             await street_input.clear()
             await street_input.send_keys(USER_DATA['calle'])
             print(f"🟢 Calle ingresada: {USER_DATA['calle']}.")
-            
+
+            elemento_verificador = await driver.find_element(By.ID, "testId-Input-street", timeout=10)
+            texto_verificador = await elemento_verificador.get_attribute('value')
+            print(texto_verificador)
+
+            #------------------------
+
             number_input = await driver.find_element(By.ID, "testId-Input-number", timeout=10)
             await number_input.clear()
             await number_input.send_keys(USER_DATA["numero"])
             print(f"🟢 Número: {USER_DATA['numero']}.")
+
+            elemento_verificador = await driver.find_element(By.ID, "testId-Input-number", timeout=10)
+            texto_verificador = await elemento_verificador.get_attribute('value')
+            print(texto_verificador)
         
 
             # 🟢 Confirmar dirección
@@ -192,13 +214,6 @@ async def get_shipping_info_for_product(product_id: str):
                                       element_description="Confirmar dirección",
                                       click_normal = False)
 
-
-            # 🟢 Confirmar y Guardar
-            # save_address_button = await driver.find_element(By.XPATH, "//button[contains(., 'Confirmar y Guardar')]", timeout=10)            
-            # await driver.execute_script("arguments[0].click();", save_address_button)
-            # print("🟢 Click en 'Confirmar y Guardar'.")
-
-
             await click_verificado_elemento(driver=driver,
                                       by=By.XPATH,
                                       element="//button[contains(., 'Confirmar y Guardar')]",
@@ -207,18 +222,13 @@ async def get_shipping_info_for_product(product_id: str):
                                       element_description="Confirmar y Guardar",
                                       click_normal = False)
 
-
-
             # ----------------------------------------------------------------------------------------------------------------------------------
-
 
             print("⏳ Esperando a que cargue la opción 'Envío a domicilio'...")
             envio_domicilio_element = await driver.find_element(By.XPATH, '//p[contains(normalize-space(), "Envío a domicilio")]', timeout=10)
             print("✅ Opción 'Envío a domicilio' encontrada.")
 
-    
             print("🕵️ Buscando la sección de 'Envío a domicilio' para extraer sus opciones...")
-
 
             opciones_de_envio = []
 
