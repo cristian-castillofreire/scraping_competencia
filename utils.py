@@ -6,88 +6,57 @@ from selenium_driverless.types.by import By
 
 
 async def ingresar_email_y_verificar(driver, email, max_retries=3):
-    """
-    Introduce un email, hace clic en continuar y verifica que el formulario avance.
-    Usa find_elements para evitar manejar la excepción TimeoutException.
-
-    :param driver: La instancia de la pestaña de driverless (ej. 'tab').
-    :param email: El correo electrónico a ingresar.
-    :param max_retries: El número máximo de intentos.
-    :return: True si el formulario avanzó con éxito, False en caso contrario.
-    """
-    error_text_xpath = "//p[text()='Ingresa tu correo electrónico para continuar']"
 
     for intento in range(max_retries):
         if intento > 0:
             print(f"🟢 Intento {intento + 1} de {max_retries} ---")
 
         try:
-            # 1. Localizar elementos y ejecutar acciones
             email_input = await driver.find_element(By.ID, "testId-Input-email", timeout=10)
             await email_input.clear()
             await email_input.send_keys(email)
             
             continue_button = await driver.find_element(By.ID, "continueButton", timeout=10)
             await continue_button.click(move_to=True)
-            print("🟢 Email ingresado y clic en 'Continuar'.")
 
-            # 2. Esperar brevemente a que la página reaccione
-            await asyncio.sleep(2) 
+            await asyncio.sleep(1) 
 
-            # 3. VERIFICACIÓN MODIFICADA: Usamos find_elements
-            # Buscamos el texto de error. La búsqueda no causará un error si no lo encuentra.
-            elementos_error = await driver.find_elements(By.XPATH, error_text_xpath)
+            # Elemento de error
+            elementos_error = await driver.find_elements(By.XPATH, "//p[text()='Ingresa tu correo electrónico para continuar']")
 
-            # Verificamos si la lista de elementos está vacía.
             if len(elementos_error) == 0:
                 # Lista vacía = no se encontró el texto de error = ¡ÉXITO!
-                print("✅ ¡Éxito! El formulario avanzó y el texto de error desapareció.")
+                print("🟢 Email ingresado y clic en 'Continuar'.")
                 return True
             else:
                 # La lista tiene elementos = se encontró el texto de error = FALLO.
-                print("🟡 El formulario no avanzó. El texto de error sigue presente.")
+                print("🟡 El formulario no avanzó.")
                 if intento < max_retries - 1:
                     print("Refrescando la página para el siguiente intento...")
                     await driver.refresh()
-                    await asyncio.sleep(3) # Espera post-refresco
                 
         except Exception as e:
-            # Este 'except' general sigue siendo útil para otros errores inesperados
-            # (ej. no encontrar el botón 'continueButton', etc.)
-            print(f"🔴 Ocurrió un error inesperado en el intento {intento + 1}: {e}")
+            print(f"🔴 Ocurrió un error inesperado: {e}")
             if intento < max_retries - 1:
-                print("Refrescando la página para reintentar...")
+                print("Refrescando la página para el siguiente intento...")
                 await driver.refresh()
-                await asyncio.sleep(3)
 
     print(f"\n🔴 No se pudo avanzar en el formulario después de {max_retries} intentos.")
+    
     return False
 
 
 
 async def hacer_clic_y_verificar_cambio_url(driver, by, value, element_description='el elemento', target_url = '', max_retries=3):
-    """
-    Busca un elemento usando un selector, le hace clic y verifica si la URL cambia.
-    Si no cambia, refresca la página y lo reintenta hasta un máximo de veces.
-
-    :param driver: La instancia del navegador o pestaña de driverless (ej. 'tab').
-    :param by: El método de selección del elemento (ej. By.XPATH, By.ID).
-    :param value: El valor del selector (ej. "//button[@id='buy']").
-    :param element_description: Una descripción opcional del elemento para mensajes más claros.
-    :param max_retries: El número máximo de intentos.
-    :return: True si el clic fue exitoso y la URL cambió, False en caso contrario.
-    """
+    
     for intento in range(max_retries):
         if intento > 0:
             print(f"🟢 Intento {intento + 1} de {max_retries} para hacer clic en '{element_description}' ---")
         try:           
-
-            # 2. Encontrar y hacer clic en el elemento (usando los parámetros)
             elemento = await driver.find_element(by, value, timeout=10)
             await elemento.click(move_to=True)
             print(f"🟢 Click en '{element_description}'.")
 
-            # 3. Esperar a que la URL cambie (con un tiempo de espera)
             tiempo_inicio = asyncio.get_event_loop().time()
             current_url = await driver.current_url
             
@@ -100,31 +69,25 @@ async def hacer_clic_y_verificar_cambio_url(driver, by, value, element_descripti
             
             print(f"URL después del clic: {current_url}")
 
-            # 4. Verificar si la URL cambió
             if current_url == target_url:
                 print(f"✅ ¡Éxito! La URL ha cambiado correctamente tras el clic en '{element_description}'.")
-                return True  # Salimos de la función con éxito
+                return True
             
-            # 5. Si la URL no cambió y no es el último intento, refrescar
             print("🟡 La URL no cambió en este intento.")
             if intento < max_retries - 1:
                 print("Refrescando la página para reintentar...")
                 await driver.refresh()
-                await asyncio.sleep(3) # Esperar un poco a que la página cargue tras el refresco
 
         except Exception as e:
             print(f"🔴 Ocurrió un error en el intento {intento + 1} al interactuar con '{element_description}': {e}")
             if intento < max_retries - 1:
                 print("Refrescando la página para reintentar...")
-                try:
-                    await driver.refresh()
-                    await asyncio.sleep(3)
-                except Exception as refresh_error:
-                    print(f"🔴 No se pudo refrescar la página: {refresh_error}")
-                    break # Si no se puede refrescar, no tiene sentido seguir
+                await driver.refresh()
+                
 
     print(f"\n🔴 Se alcanzó el número máximo de reintentos sin éxito para '{element_description}'.")
     return False
+
 
 # FUNCIONES PARA ELEGIR LA MEJOR FECHA ----------------------------------------
 # -----------------------------------------------------------------------------

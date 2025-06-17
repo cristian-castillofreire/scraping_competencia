@@ -50,7 +50,7 @@ async def get_shipping_info_for_product(product_id: str):
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
 
-    from utils import _parse_date, _comparar_dos_opciones, encontrar_mejor_opcion_segun_reglas, hacer_clic_y_verificar_cambio_url, ingresar_email_y_verificar
+    from utils import encontrar_mejor_opcion_segun_reglas, hacer_clic_y_verificar_cambio_url, ingresar_email_y_verificar
     
     
     try:
@@ -181,10 +181,12 @@ async def get_shipping_info_for_product(product_id: str):
             print(f"🟢 Comuna seleccionada: {USER_DATA['comuna']}.")
 
             street_input = await driver.find_element(By.ID, "testId-Input-street", timeout=10)
+            await street_input.clear()
             await street_input.send_keys(USER_DATA['calle'])
             print(f"🟢 Calle ingresada: {USER_DATA['calle']}.")
             
             number_input = await driver.find_element(By.ID, "testId-Input-number", timeout=10)
+            await number_input.clear()
             await number_input.send_keys(USER_DATA["numero"])
             print(f"🟢 Número: {USER_DATA['numero']}.")
         
