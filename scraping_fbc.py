@@ -387,6 +387,14 @@ async def get_shipping_info_for_product(product_id: str):
 
     except Exception as e:
         print(f"❌ Ocurrió un error al procesar el producto {product_id}.")
+        # ------------------------------------
+        print("📸 Guardando captura de pantalla y HTML para análisis...")
+        await driver.save_screenshot("debug_screenshot.png")
+        page_source = await driver.page_source
+        with open("debug_page.html", "w", encoding="utf-8") as f:
+            f.write(page_source)
+        print("✅ Evidencia guardada.")
+        # ------------------------------------
         print(f"Detalles del error: {e}")
         traceback.print_exc()
         print("---------------------------------------\n")
