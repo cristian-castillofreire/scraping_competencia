@@ -196,6 +196,10 @@ async def get_shipping_info_for_product(product_id: str):
                                       click_normal = False)
 
             # ----------------------------------------------------------------------------------------------------------------------------------
+            
+            await driver.refresh()
+
+            # ------------------ Debug ------------------
             print("📸 Guardando screenshot")
             await driver.save_screenshot(f"debug_screenshot_{product_id}.png")
             print(f"✅ Captura de pantalla guardada.")
