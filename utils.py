@@ -10,6 +10,45 @@ class maxRetries(Exception):
 
 
 # -----------------------------------------------------------------------------
+# FUNCIÓN para hacer click y verificar selección
+# -----------------------------------------------------------------------------
+async def click_verificado_seleccion(driver, by, element, by_verifier, verifier_element, selected_item, element_description = 'Texto', click_normal = True, max_retries=3, auto_refresh = True):
+
+    for intento in range(max_retries):
+        if intento > 0:
+            print(f"🔄 Intento {intento + 1} de {max_retries}...")
+
+        try:
+            elemento = await driver.find_element(by, element, timeout=10)
+            if click_normal:
+                await elemento.click(move_to=True)
+            else:
+                await driver.execute_script("arguments[0].click();", elemento)
+            
+            elemento_verificador = await driver.find_element(by_verifier, verifier_element, timeout=10)
+            texto_verificador = await elemento_verificador.get_attribute('value')
+
+            if texto_verificador == selected_item:
+                print(f"🟢 {element_description} ingresado correctamente.")
+                return True
+            else:
+                print("🟡 Problema al ingresar el texto.")
+                if intento < max_retries - 1:
+                    print("➡️ Refrescando la página para reintentar.")
+                    await driver.refresh()
+                
+        except Exception as e:
+            print(f"🔴 Ocurrió un error inesperado: {e}")
+            if intento < max_retries - 1:
+                print("➡️ Refrescando la página para reintentar.")
+                if auto_refresh:
+                    await driver.refresh()
+
+    print(f"🔴 No se pudo avanzar en el formulario después de {max_retries} intentos.")
+    raise maxRetries(f"Se agotó el número de intentos para ingresar el texto.")
+
+
+# -----------------------------------------------------------------------------
 # FUNCIÓN para hacer click con reintentos capturando NoSuchElementException
 # -----------------------------------------------------------------------------
 async def click_con_reintentos(driver, by, element, element_description, click_normal = True, max_retries=3, auto_refresh = False):
@@ -52,6 +91,7 @@ async def send_keys_verificado(driver, by, element, input_text, element_descript
 
         try:
             input_field = await driver.find_element(by, element, timeout=10)
+            await input_field.clear()
             await input_field.send_keys(input_text)
             
             elemento_verificador = await driver.find_element(by, element, timeout=10)
