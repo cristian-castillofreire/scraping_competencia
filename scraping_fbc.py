@@ -15,7 +15,7 @@ warnings.filterwarnings("ignore", message="got execution_context_id and unique_c
 # Lista de productos    
 # product_ids = ['2521167', '2473515', '2537673', '2558268', '2565136', '2675502', '2700993', '2701014', '2701754', '2701755', '2702948', '2707002', '2707003', '2707301', '2708797', '2712096', '2759321', '2780334', '2780336', '2789831', '2798641', '2819857', '2820362', '2827037', '2827040', '2865616', '2865619', '2892131', '2908801', '2915441', '2985129', '2998040', '3003862', '3031421', '3031463', '3031815', '3038575', '3038579', '3038580', '3066595', '3111527', '3111992', '3122360', '3135729', '3135730', '3135731', '3136861', '3166646', '3265384', '3287877', '3287878', '3305978', '3306724', '3332645', '3370076', '3370168', '3391399', '3391400', '3391401', '3397897', '3435418', '3447807', '3448861', '3466711', '3466712', '3466713', '3477988', '3480446', '3480621', '3491456', '3491457', '3512125', '3524974', '3526765', '3550468', '3550484', '3550486', '3562061', '3604978', '3617925', '3647578', '3647636', '3651417', '3653333', '3668020', '3678720', '3685373', '3693050', '3695141', '3695143', '3695143', '3695146', '3741606', '3741613', '3793334', '3794880', '3839491', '3839492', '3842992', '3843025', '3843026', '3843179', '3860939', '3860940', '3869308', '3892545', '3892548', '3903121', '3904276']
 # product_ids = ['118323391', '15643401', '110037565', '138124130', '17287672', '17127319', '15784952', '139603723', '7001702', '17243432']
-product_ids = ['15643401']
+product_ids = ['15643401', '2700993']
 
 # Datos cliente
 USER_DATA = {
@@ -62,6 +62,13 @@ async def get_shipping_info_for_product(product_id: str):
             
             await driver.get(f"https://www.falabella.com/falabella-cl/product/{product_id}", wait_load=True)
             print(f"🟢 Página de producto {product_id} cargada.")
+
+            current_url = await driver.current_url
+
+            if current_url == 'https://www.falabella.com/falabella-cl/notFound':
+                print("⏩ El producto ya no se encuentra disponible. Avanzando al siguiente.")
+                return None
+            
 
 
             # Flags en PDP  -----------------------------------------------------------------------------------------
@@ -196,22 +203,21 @@ async def get_shipping_info_for_product(product_id: str):
                                       click_normal = False)
 
             # ----------------------------------------------------------------------------------------------------------------------------------
+            # ------------------ Debug ------------------
             
             # await driver.refresh()
-            await driver.back()
-            await asyncio.sleep(30)
+            # await driver.back()
+            # await asyncio.sleep(30)           
             
-
-            # ------------------ Debug ------------------
-            print("📸 Guardando screenshot")
-            await driver.save_screenshot(f"debug_screenshot_{product_id}.png")
-            print(f"✅ Captura de pantalla guardada.")
+            # print("📸 Guardando screenshot")
+            # await driver.save_screenshot(f"debug_screenshot_{product_id}.png")
+            # print(f"✅ Captura de pantalla guardada.")
             
-            print("📄 Guardando HTML...")
-            page_source = await driver.page_source
-            with open(f"debug_page_{product_id}.html", "w", encoding="utf-8") as f:
-                f.write(page_source)
-            print(f"✅ HTML guardado.")
+            # print("📄 Guardando HTML...")
+            # page_source = await driver.page_source
+            # with open(f"debug_page_{product_id}.html", "w", encoding="utf-8") as f:
+            #     f.write(page_source)
+            # print(f"✅ HTML guardado.")
 
             # ----------------------------------------------------------------------------------------------------------------------------------
 
