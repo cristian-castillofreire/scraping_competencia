@@ -198,8 +198,8 @@ async def get_shipping_info_for_product(product_id: str):
             # ----------------------------------------------------------------------------------------------------------------------------------
             
             # await driver.refresh()
-            # await asyncio.sleep(30)
             await driver.back()
+            await asyncio.sleep(30)
             
 
             # ------------------ Debug ------------------
