@@ -1,16 +1,15 @@
 import time
 import json
 import re
+import warnings
+import asyncio
 from datetime import datetime
 import pandas as pd
-import asyncio
-import traceback
 from selenium_driverless.types.by import By
 from selenium_driverless.types.webelement import NoSuchElementException
-from utils import click_verificado_url, click_verificado_elemento, click_con_reintentos, click_verificado_seleccion, send_keys_verificado
+from utils import click_verificado_elemento, click_con_reintentos, send_keys_verificado
 from utils import setup_driver, encontrar_mejor_shipping
-from utils import verification_code_email, delete_all_falabella_notifications, generate_email
-import warnings
+from utils import verification_code_email, delete_all_falabella_notifications
 warnings.filterwarnings("ignore", message="got execution_context_id and unique_context=True, defaulting to execution_context_id")
 
 # Lista de productos
@@ -23,63 +22,51 @@ product_ids = ['15643401', '17187740']
 # Datos cliente
 ADDRESS_DATA = [{
     "region": "METROPOLITANA DE SANTIAGO",
-    "comuna": "MAIPÚ",
-    "calle": "Avenida 3 Poniente",
-    "numero": "1101"
-},
-{
-    "region": "METROPOLITANA DE SANTIAGO",
-    "comuna": "MAIPÚ",
-    "calle": "Avenida 3 Poniente",
-    "numero": "1102"
-},
-{
-    "region": "METROPOLITANA DE SANTIAGO",
     "comuna": "LAS CONDES",
-    "calle": "Rosario Norte",
-    "numero": "660"
-},
-{
-    "region": "BIOBÍO",
-    "comuna": "CONCEPCIÓN",
-    "calle": "Lautaro",
-    "numero": "1655"
+    "calle": "Yaguero",
+    "numero": "7786"
 },
 {
     "region": "ANTOFAGASTA",
     "comuna": "ANTOFAGASTA",
-    "calle": "Simon Bolivar",
-    "numero": "672"
-},
-{
-    "region": "METROPOLITANA DE SANTIAGO",
-    "comuna": "MAIPÚ",
-    "calle": "Avenida 3 Poniente",
-    "numero": "1101"
-},
-{
-    "region": "METROPOLITANA DE SANTIAGO",
-    "comuna": "MAIPÚ",
-    "calle": "Avenida 3 Poniente",
-    "numero": "1102"
-},
-{
-    "region": "METROPOLITANA DE SANTIAGO",
-    "comuna": "LAS CONDES",
-    "calle": "Rosario Norte",
-    "numero": "660"
+    "calle": "Juan Agustín Cornejo",
+    "numero": "7373"
 },
 {
     "region": "BIOBÍO",
     "comuna": "CONCEPCIÓN",
-    "calle": "Lautaro",
-    "numero": "1655"
+    "calle": "Juan Martínez De Rozas",
+    "numero": "1699"
 },
 {
-    "region": "ANTOFAGASTA",
-    "comuna": "ANTOFAGASTA",
-    "calle": "Simon Bolivar",
-    "numero": "672"
+    "region": "VALPARAÍSO",
+    "comuna": "VALPARAÍSO",
+    "calle": "Chacabuco",
+    "numero": "2012"
+},
+{
+    "region": "LA ARAUCANÍA",
+    "comuna": "TEMUCO",
+    "calle": "Juan Caniullan",
+    "numero": "1901"
+},
+{
+    "region": "VALPARAÍSO",
+    "comuna": "VIÑA DEL MAR",
+    "calle": "1 Poniente",
+    "numero": "497"
+},
+{
+    "region": "LIBERTADOR GENERAL BERNARDO O'HIGGINS",
+    "comuna": "RANCAGUA",
+    "calle": "Amberes",
+    "numero": "139"
+},
+{
+    "region": "COQUIMBO",
+    "comuna": "LA SERENA",
+    "calle": "Avenida Balmaceda",
+    "numero": "686"
 }
 ]
 
@@ -127,6 +114,11 @@ EMAIL_DATA = [{
 }
 ]
 
+meses = {
+    'ene': 1, 'feb': 2, 'mar': 3, 'abr': 4, 'may': 5, 'jun': 6,
+    'jul': 7, 'ago': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dic': 12
+}
+
 
 
 class RequestOrderCounter:
@@ -146,7 +138,7 @@ request_counter = RequestOrderCounter()
 
 
 async def run_scraping(product_list: list[str], task_id: int):
-    
+
     # Lanzar contextos con delay para reducir carga en cpu
     await asyncio.sleep(5 * (task_id + 1))
 
@@ -163,21 +155,21 @@ async def run_scraping(product_list: list[str], task_id: int):
                 tab_driver = await driver_global.new_context()
                 break  # Exit the loop if successful
             except Exception as e:
-                print(f"🟡 Error al crear contexto para {product_id} (intento {attempt + 1}/{max_context_retries}): {e}")
+                print(f"🟡 Error al crear contexto para task id {task_id} (intento {attempt + 1}/{max_context_retries}): {e}")
                 if attempt < max_context_retries - 1:
                     print("➡️ Reintentando la creación del contexto en 5 segundos.")
                     await asyncio.sleep(5)
                 else:
-                    print(f"🔴 No fue posible crear el contexto luego de {max_context_retries} intentos. Omitiendo el producto {product_id}.")
+                    print(f"🔴 No fue posible crear el contexto luego de {max_context_retries} intentos. Omitiendo task id {task_id}.")
                     return None
     except Exception as e:
-            print(f"❌ No fue posible crear contexto para task id {task_id}.")
+        print(f"❌ No fue posible crear contexto para task id {task_id}: {e}")
 
 
     # Iniciar sesión -----------------------------------------------------------------------------
 
     # ✅ Cargar login
-    await tab_driver.get(f"https://www.falabella.com/falabella-cl/myaccount/login", wait_load=True, timeout=60)
+    await tab_driver.get("https://www.falabella.com/falabella-cl/myaccount/login", wait_load=True, timeout=60)
 
     # 🟢 Ingresar correo
     await send_keys_verificado(driver=tab_driver, by=By.ID, element="email", input_text=ACCOUNT_DATA[task_id]["user"], element_description="Mail")
@@ -185,11 +177,11 @@ async def run_scraping(product_list: list[str], task_id: int):
     # 🟢 Ingresar contraseña
     await send_keys_verificado(driver=tab_driver, by=By.ID, element="password", input_text=ACCOUNT_DATA[task_id]["pw"], element_description="Contraseña", auto_refresh=False)
 
-    # 🟢 Click en 'Ingresar'       
+    # 🟢 Click en 'Ingresar'
     await click_con_reintentos(driver=tab_driver, by=By.XPATH, element="//span[text()='Ingresar']", element_description='Ingresar', timeout = 10, max_retries=5, auto_refresh = False)
-    
-    try: 
-                
+
+    try:
+
         await tab_driver.find_element(By.XPATH, "//p[text()='Confirma tu inicio de sesión']", timeout=3)
         print("🔒🔑 Se requiere A2F.")
 
@@ -202,10 +194,10 @@ async def run_scraping(product_list: list[str], task_id: int):
                                 element_description="Correo A2F",
                                 elemento_actual=False,
                                 auto_refresh=False)
-        
+
         # Orden de solicitud para código A2F
         request_order = await request_counter.increment()
-        
+
         # 🟢 Ingresar código de verificación
         input_field = await tab_driver.find_element(By.ID, "otp-0", timeout=20)
         request_order = 0
@@ -221,31 +213,30 @@ async def run_scraping(product_list: list[str], task_id: int):
                                 element_description="Continuar",
                                 elemento_actual=False,
                                 auto_refresh=False)
-        
+
         print("🔓🔑 Inicio de sesión con A2F exitoso.")
 
 
     except NoSuchElementException:
         print("🔓🔑 Inicio de sesión exitoso.")
-        pass
 
     # --------------------------------------------------------------------------------------------
 
 
     for product_id in product_list:
-       
+
         print(f"\n--- Procesando Product ID: {product_id} ---")
 
         try:
-            
+
             pdp_compra_internacional = False
-            pdp_envio_gratis_app = False      
+            pdp_envio_gratis_app = False
 
             # 🟢 Ir al carro
             current_url = await tab_driver.current_url
             if current_url != 'https://www.falabella.com/falabella-cl/basket':
-                await tab_driver.get(f"https://www.falabella.com/falabella-cl/basket", wait_load=True, timeout=60)
-                print(f"🟢 Página de carro cargada.")
+                await tab_driver.get("https://www.falabella.com/falabella-cl/basket", wait_load=True, timeout=60)
+                print("🟢 Página de carro cargada.")
 
             try:
                 await tab_driver.find_element(By.XPATH, "//h2[contains(text(), 'Tu Carro está vacío')]", timeout=5)
@@ -257,12 +248,12 @@ async def run_scraping(product_list: list[str], task_id: int):
                                 by=By.XPATH,
                                 element="//button[contains(@data-testid, '-new-design-decrement-button')]",
                                 by_verifier=By.XPATH,
-                                verifier_element="//button[contains(@data-testid, '-new-design-decrement-button')]",
-                                element_description="Eliminar producto del carro (-)",
-                                elemento_actual=True,
+                                verifier_element="//h2[contains(text(), 'Tu Carro está vacío')]",
+                                element_description="Eliminar producto del carro",
+                                elemento_actual=False,
                                 auto_refresh=False,
                                 max_retries=10)
-            
+
                 await asyncio.sleep(2)  # Esperar a que se actualice el carro
 
             # --------------------------------------------------------------------------------------------
@@ -313,7 +304,7 @@ async def run_scraping(product_list: list[str], task_id: int):
             await click_con_reintentos(driver=tab_driver, by=By.ID, element='add-to-cart-button', element_description='Agregar al carro (PDP)', timeout = 20, max_retries=5, auto_refresh = True)
 
             print("⏳ Verificando opciones extra.")
-            
+
             # Variantes -----------------------------------------------------------------------------------------
             variant_selected = False
             button_text = ""
@@ -321,9 +312,9 @@ async def run_scraping(product_list: list[str], task_id: int):
             try:
                 operator_container = await tab_driver.find_element(By.ID, "testId-Operator-container", timeout=2)
                 print("✅ Contenedor de 'Operador' encontrado.")
-                
+
                 first_available_option = await operator_container.find_element(By.CSS_SELECTOR, "button.operator:not([disabled])")
-                
+
                 button_text = await first_available_option.text
                 await tab_driver.execute_script("arguments[0].click();", first_available_option)
                 print(f"🟢 Se hizo click en la opción de operador: '{button_text}'")
@@ -333,7 +324,7 @@ async def run_scraping(product_list: list[str], task_id: int):
                 try:
                     size_container = await tab_driver.find_element(By.CSS_SELECTOR, "div.size-options", timeout=2)
                     print("✅ Contenedor de 'Talla' encontrado.")
-                    
+
                     first_available_option = await size_container.find_element(By.CSS_SELECTOR, "button.size-button:not([disabled])")
 
                     button_text = await first_available_option.text
@@ -349,15 +340,15 @@ async def run_scraping(product_list: list[str], task_id: int):
                 await tab_driver.execute_script("arguments[0].click();", go_to_cart_button)
                 print("🟢 Click en 'Agregar al Carro (variant)'.")
             # ---------------------------------------------------------------------------------------------------------
-            
+
             # Garantía extendida --------------------------------------------------------------------------------------
             try:
                 await tab_driver.find_element(By.XPATH, "//p[contains(., 'Protege tu producto')]", timeout=2)
                 print("✅ Opción de Garantía encontrado.")
-            
+
                 continuar_sin_proteccion_btn = await tab_driver.find_element(By.XPATH, "//button[normalize-space()='Continuar sin protección']", timeout=2)
                 await tab_driver.execute_script("arguments[0].click();", continuar_sin_proteccion_btn)
-                
+
                 print("🟢 Click en 'Continuar sin protección'.")
 
             except NoSuchElementException:
@@ -372,11 +363,11 @@ async def run_scraping(product_list: list[str], task_id: int):
             hoy = datetime.now()
             fecha_actual_str = hoy.strftime('%d/%m/%Y')
 
-            
+
             for address in ADDRESS_DATA:
 
                 opciones_de_envio = []
-            
+
                 # 🟢 Click en 'Cambiar dirección'
                 await click_verificado_elemento(driver=tab_driver,
                                                 by=By.ID,
@@ -386,7 +377,7 @@ async def run_scraping(product_list: list[str], task_id: int):
                                                 element_description="Cambiar dirección",
                                                 elemento_actual=False,
                                                 auto_refresh=False)
-                
+
                 # 🟢 Click en dirección
                 print(f"⏳ Buscando la dirección para: {address['calle']}, {address['numero']}")
 
@@ -409,10 +400,10 @@ async def run_scraping(product_list: list[str], task_id: int):
                                                 element_description="Seleccionar",
                                                 elemento_actual=True,
                                                 auto_refresh=False)
-                
+
                 print("⏳ Esperando recálculo de envío...")
-                await asyncio.sleep(5) 
-                
+                await asyncio.sleep(5)
+
                 try:
                     print("⏳ Esperando a que cargue la opción 'Envío a domicilio'...")
                     await tab_driver.find_element(By.XPATH, '//p[contains(normalize-space(), "Envío a domicilio")]', timeout=20)
@@ -437,7 +428,7 @@ async def run_scraping(product_list: list[str], task_id: int):
                             "dateRangeLB": "",
                             "dateRangeUB": ""
                         }
-                    
+
                     filas_para_excel.append(fila)
                     print("🟢 El producto no está disponible para envío a domicilio.")
                     continue
@@ -449,13 +440,13 @@ async def run_scraping(product_list: list[str], task_id: int):
                 try:
                     seccion_envio_domicilio = await tab_driver.find_element(By.XPATH, '//p[contains(normalize-space(), "Envío a domicilio")]/../..')
                     hijos_directos = await seccion_envio_domicilio.find_elements(By.XPATH, "./div")
-                    
+
                     if len(hijos_directos) > 1:
                         contenedores_de_opciones = hijos_directos[1:]
                         print(f"✅ Se procesarán {len(contenedores_de_opciones)} contenedores de opciones de envío.")
 
                         for i, opcion_contenedor in enumerate(contenedores_de_opciones):
-                            
+
                             # Variables de búsqueda en checkout
                             promesa = ""
                             precio =  ""
@@ -478,7 +469,7 @@ async def run_scraping(product_list: list[str], task_id: int):
                                 price_elem = await opcion_contenedor.find_element(By.CSS_SELECTOR, "span[data-testid='shipment-price']", timeout=1)
                                 precio = await price_elem.text
                             except NoSuchElementException:
-                                print(f"🟡 Info (Opción {i+1}): No se encontró el precio.")                      
+                                print(f"🟡 Info (Opción {i+1}): No se encontró el precio.")
 
                             try:
                                 await opcion_contenedor.find_element(By.CSS_SELECTOR, "div[data-testid='free-shipping-badge']", timeout=1)
@@ -491,7 +482,7 @@ async def run_scraping(product_list: list[str], task_id: int):
                                 free_shipping_label = True
                             except NoSuchElementException:
                                 pass
-                            
+
                             opciones_de_envio.append({
                                 "opcion_nro": i + 1,
                                 "promesa_entrega": promesa,
@@ -506,21 +497,17 @@ async def run_scraping(product_list: list[str], task_id: int):
                     print("❌ ERROR: No se pudo encontrar la sección de 'Envío a domicilio'.")
 
                 # Formato promesa ------------------------------------------
-                meses = {
-                    'ene': 1, 'feb': 2, 'mar': 3, 'abr': 4, 'may': 5, 'jun': 6,
-                    'jul': 7, 'ago': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dic': 12
-                }
-
                 def formatear_fecha(tupla_fecha, fecha_referencia):
                     dia_str, mes_str = tupla_fecha
                     dia = int(dia_str)
                     mes = meses.get(mes_str)
-                    if not mes: return ""
-                    
+                    if not mes:
+                        return ""
+
                     ano = fecha_referencia.year
                     if mes < fecha_referencia.month:
                         ano += 1
-                    
+
                     try:
                         return datetime(ano, mes, dia).strftime("%d/%m/%Y")
                     except ValueError:
@@ -528,7 +515,7 @@ async def run_scraping(product_list: list[str], task_id: int):
 
                 for opcion in opciones_de_envio:
                     promesa_texto = opcion.get("promesa_entrega", "")
-                    
+
                     opcion["specificDate"] = ""
                     opcion["dateRangeLB"] = ""
                     opcion["dateRangeUB"] = ""
@@ -550,7 +537,7 @@ async def run_scraping(product_list: list[str], task_id: int):
 
 
                 mejor_opcion = encontrar_mejor_shipping(opciones_de_envio)
-                
+
                 if mejor_opcion:
                     fila = {
                         "region": address["region"],
@@ -569,7 +556,7 @@ async def run_scraping(product_list: list[str], task_id: int):
                         "dateRangeLB": mejor_opcion.get("dateRangeLB", ""),
                         "dateRangeUB": mejor_opcion.get("dateRangeUB", "")
                     }
-            
+
                     filas_para_excel.append(fila)
                     print(f"🟢 Datos guardados para {address['calle']}, {address['numero']}.")
 
@@ -579,7 +566,7 @@ async def run_scraping(product_list: list[str], task_id: int):
 
             # 🟢 Volver al carro
             print("🟢 Volviendo al carro...")
-            await tab_driver.get(f"https://www.falabella.com/falabella-cl/basket", wait_load=True, timeout=60)
+            await tab_driver.get("https://www.falabella.com/falabella-cl/basket", wait_load=True, timeout=60)
 
             # 🟢 Eliminar producto
             print("⏳ Eliminando producto del carro...")
@@ -588,23 +575,23 @@ async def run_scraping(product_list: list[str], task_id: int):
                                 element="//button[contains(@data-testid, '-new-design-decrement-button')]",
                                 by_verifier=By.XPATH,
                                 verifier_element="//button[contains(@data-testid, '-new-design-decrement-button')]",
-                                element_description="Eliminar producto del carro (-)",
+                                element_description="Eliminar producto del carro",
                                 elemento_actual=True,
                                 auto_refresh=False)
-            
+
             await asyncio.sleep(2)  # Esperar a que se actualice el carro
 
             # ----------------------------------------------------------------------------------------------------------------
             print("\n--- Resultados: ---")
-            print(json.dumps(filas_para_excel, indent=2, ensure_ascii=False))  
-        
+            print(json.dumps(filas_para_excel, indent=2, ensure_ascii=False))
+
 
         except Exception as e:
             print(f"❌ Ocurrió un error al procesar el producto {product_id}.")
             print(f"Detalles del error: {e}")
             print("---------------------------------------\n")
             continue
-    
+
     # ------------------------------------------------------------------------------------------------------------------------------------
     # Al terminar todos los item_id en product_list, cerrar el contexto del navegador
     await tab_driver.close()
@@ -616,7 +603,7 @@ async def run_scraping(product_list: list[str], task_id: int):
 
 
 async def main():
-    global driver_global
+    global driver_global # pylint: disable=W0601
     start_time = time.time()
 
     # Instancia global del driver
@@ -635,7 +622,7 @@ async def main():
     for i, chunk in enumerate(chunks):
         tasks = [run_scraping(chunk, i)]
         results = await asyncio.gather(*tasks)
-        
+
         for product_data_list in results:
             if product_data_list:
                 all_products_data.extend(product_data_list)
