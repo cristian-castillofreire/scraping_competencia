@@ -3,10 +3,227 @@ from functools import reduce
 import asyncio
 from selenium_driverless.types.by import By
 from selenium_driverless.types.webelement import NoSuchElementException
-
+from selenium_driverless import webdriver
+import random
+import string
+import json
+import imaplib
+import email
+import re
+import time
 
 class maxRetries(Exception):
     pass
+
+
+
+# -----------------------------------------------------------------------------
+# FUNCIÓN para leer código de verificación A2F desde Gmail
+# -----------------------------------------------------------------------------
+def verification_code_email(myEmail, myPassword, imap_server="imap.gmail.com", action="read", email_index=0, max_retries=5, retry_delay_seconds=5):
+
+    def extract_verification_code(body):
+        phrase = "Si fuiste tú, ingresa este código verificador:"
+        if phrase in body:
+            match = re.search(rf"{re.escape(phrase)}\s*\n*\s*(\d{{6}})", body)
+            if match:
+                return match.group(1)
+        return None
+
+    target_sender = "notificaciones@mail.falabella.com"
+
+    for attempt in range(max_retries):
+        
+        if attempt == 0:
+            time.sleep(5)    
+
+        print(f"➡️ Intento {attempt + 1} de {max_retries} para obtener código A2F.")
+        mail = None
+        try:
+            mail = imaplib.IMAP4_SSL(imap_server)
+            mail.login(myEmail, myPassword)
+            mail.select("inbox")
+
+            status, messages = mail.search(None, 'FROM', f'"{target_sender}"')
+            email_ids = messages[0].split()
+
+            if email_ids:
+                # List to store (email_datetime, email_id) tuples
+                emails_with_dates = []
+
+                for uid in email_ids:
+                    # Fetch only the 'Date' header first to avoid downloading full emails unnecessarily
+                    status, msg_data = mail.fetch(uid, "(BODY.PEEK[HEADER.FIELDS (Date)])")
+                    raw_header = msg_data[0][1]
+                    msg_header = email.message_from_bytes(raw_header)
+                    date_header = msg_header['Date']
+
+                    email_datetime = email.utils.parsedate_to_datetime(date_header)
+                    emails_with_dates.append((email_datetime, uid))                   
+                
+                # Sort emails by their datetime, oldest to newest
+                emails_with_dates.sort(key=lambda x: x[0])
+
+                # Check if the desired email_index is valid for both actions
+                if email_index >= len(emails_with_dates):
+                    print(f"Email index {email_index} Fuera de rango. Se encontraron solo {len(emails_with_dates)} emails.")
+                    return None # No email at this index to read or delete
+
+                selected_email_id_bytes = emails_with_dates[email_index][1]
+                selected_email_id = selected_email_id_bytes.decode() if isinstance(selected_email_id_bytes, bytes) else selected_email_id_bytes
+
+                if action == "delete":
+                    mail.store(selected_email_id, "+FLAGS", "\\Deleted")  # Mark for deletion
+                    mail.expunge()  # Permanently delete marked emails
+                    print(f"🟢 Email eliminado exitosamente.")
+                    return None # Deletion successful, no code to return
+
+                elif action == "read":
+                    # Now fetch the full content of the selected email
+                    status, msg_data = mail.fetch(selected_email_id, "(RFC822)")
+                    raw_email = msg_data[0][1]
+                    msg = email.message_from_bytes(raw_email)
+
+                    if msg.is_multipart():
+                        for part in msg.walk():
+                            if part.get_content_type() == "text/plain":
+                                body = part.get_payload(decode=True).decode()
+                                code = extract_verification_code(body)
+                                if code:
+                                    print(f"🟢 Se encontró código A2F: {code}")
+                                    return code
+                                break
+                    else:
+                        body = msg.get_payload(decode=True).decode()
+                        code = extract_verification_code(body)
+                        if code:
+                            print(f"🟢 Se encontró código A2F: {code}")
+                            return code
+                else:
+                    print(f"🔴 Invalid action specified: '{action}'. Action must be 'read' or 'delete'.")
+                    return None
+            else:
+                print("🔴 No emails found from the specified sender.")
+        except Exception as e:
+            print(f"🔴 Ocurrió un error: {e}")
+        finally:
+            if mail:
+                try:
+                    mail.logout()
+                except Exception as e:
+                    print(f"🔴 Error during logout: {e}")
+
+        if action == "read":
+            print(f"🟡⏳ No se encontró correo con el código A2F. Reintentando en {retry_delay_seconds} segundos.")
+            time.sleep(retry_delay_seconds)
+        else: 
+            return None
+
+    return None
+
+
+# -----------------------------------------------------------------------------
+# FUNCIÓN para eliminar todos los correos de Falabella
+# -----------------------------------------------------------------------------
+def delete_all_falabella_notifications(myEmail, myPassword, imap_server="imap.gmail.com"):
+    target_sender = "notificaciones@mail.falabella.com"
+    mail = None
+    try:
+        print(f"Connecting to IMAP server '{imap_server}' for {myEmail} to delete emails from {target_sender}...")
+        mail = imaplib.IMAP4_SSL(imap_server)
+        mail.login(myEmail, myPassword)
+        mail.select("inbox") # Select the inbox folder
+
+        print(f"Searching for emails from '{target_sender}'...")
+        status, messages = mail.search(None, 'FROM', f'"{target_sender}"')
+        email_ids = messages[0].split()
+
+        if email_ids:
+            print(f"Found {len(email_ids)} emails from '{target_sender}'. Deleting them now...")
+            deleted_count = 0
+            for uid in email_ids:
+                try:
+                    # Mark the email for deletion
+                    mail.store(uid, '+FLAGS', '\\Deleted')
+                    deleted_count += 1
+                except Exception as e:
+                    print(f"Error marking email ID {uid.decode()} for deletion: {e}")
+            
+            # Permanently delete marked emails
+            mail.expunge()
+            print(f"Successfully deleted {deleted_count} emails from '{target_sender}'.")
+            return True
+        else:
+            print(f"No emails found from '{target_sender}'. Nothing to delete.")
+            return True
+
+    except imaplib.IMAP4.error as e:
+        print(f"IMAP login or operation error: {e}")
+        print("Please check your email, password, and IMAP settings (e.g., enable IMAP, use app password for Gmail).")
+        return False
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return False
+    finally:
+        if mail:
+            try:
+                mail.logout()
+                print("Disconnected from IMAP server.")
+            except Exception as e:
+                print(f"Error during logout: {e}")
+
+
+# -----------------------------------------------------------------------------
+# FUNCIÓN para levantar el driver de Selenium
+# -----------------------------------------------------------------------------
+async def setup_driver():
+    
+    options = webdriver.ChromeOptions()
+    user_agent = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/125.0.0.0 Safari/537.36"
+    )
+    # options.add_argument("--headless")
+    options.add_argument(f"--user-agent={user_agent}")
+    options.add_argument("--window-size=1920,1080")
+    options.add_argument("--start-maximized")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-features=DisableLoadExtensionCommandLineSwitch")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--disable-software-rasterizer")
+    options.add_argument("--disable-background-networking")
+    options.add_argument("--disable-sync")
+    options.add_argument("--disable-default-apps")
+    options.add_argument("--disable-translate")
+    options.add_argument("--no-first-run")
+    options.add_argument("--no-default-browser-check")
+    prefs = {
+        "profile.managed_default_content_settings.images": 2,
+        "profile.managed_default_content_settings.stylesheet": 2,
+        "profile.managed_default_content_settings.fonts": 2,
+        "profile.managed_default_content_settings.popups": 2,
+        "profile.managed_default_content_settings.plugins": 2,
+        "profile.managed_default_content_settings.notifications": 2,
+        "profile.managed_default_content_settings.automatic_downloads": 2,
+    }
+    options.add_experimental_option("prefs", prefs)
+
+    return await webdriver.Chrome(options=options)
+
+
+# -----------------------------------------------------------------------------
+# FUNCIÓN para generar un email aleatorio
+# -----------------------------------------------------------------------------
+def generate_email():
+  allowed_characters = string.ascii_lowercase + string.digits
+  min_length = 30
+  max_length = 40
+  username_length = random.randint(min_length, max_length)
+  random_username = ''.join(random.choice(allowed_characters) for _ in range(username_length))
+  email = f"{random_username}@gmail.com"
+  
+  return email
 
 
 # -----------------------------------------------------------------------------
@@ -25,7 +242,7 @@ async def click_verificado_seleccion(driver, by, element, by_verifier, verifier_
             else:
                 await driver.execute_script("arguments[0].click();", elemento)
             
-            elemento_verificador = await driver.find_element(by_verifier, verifier_element, timeout=10)
+            elemento_verificador = await driver.find_element(by_verifier, verifier_element, timeout=20)
             texto_verificador = await elemento_verificador.get_attribute('value')
 
             if texto_verificador == selected_item:
@@ -34,15 +251,15 @@ async def click_verificado_seleccion(driver, by, element, by_verifier, verifier_
             else:
                 print("🟡 Problema al ingresar el texto.")
                 if intento < max_retries - 1:
-                    print("➡️ Refrescando la página para reintentar.")
                     if auto_refresh:
+                        print("➡️ Refrescando la página para reintentar.")
                         await driver.refresh()
                 
         except Exception as e:
             print(f"🔴 Ocurrió un error inesperado: {e}")
             if intento < max_retries - 1:
-                print("➡️ Refrescando la página para reintentar.")
                 if auto_refresh:
+                    print("➡️ Refrescando la página para reintentar.")
                     await driver.refresh()
 
     print(f"🔴 No se pudo avanzar en el formulario después de {max_retries} intentos.")
@@ -52,12 +269,12 @@ async def click_verificado_seleccion(driver, by, element, by_verifier, verifier_
 # -----------------------------------------------------------------------------
 # FUNCIÓN para hacer click con reintentos capturando NoSuchElementException
 # -----------------------------------------------------------------------------
-async def click_con_reintentos(driver, by, element, element_description, click_normal = True, max_retries=3, auto_refresh = False):
+async def click_con_reintentos(driver, by, element, element_description, timeout = 10, click_normal = True, max_retries=3, auto_refresh = False):
     for intento in range(max_retries):
         try:
             if intento > 0:
                 print(f"🔄 Intento {intento + 1} de {max_retries}...")
-            elemento = await driver.find_element(by, element, timeout=10)
+            elemento = await driver.find_element(by, element, timeout)
             if click_normal:
                 await elemento.click(move_to=True)
             else:
@@ -70,14 +287,14 @@ async def click_con_reintentos(driver, by, element, element_description, click_n
             print(f"🟡 Intento {intento + 1} fallido: No se encontró el elemento.")
             
             if intento < max_retries - 1:
-                print("➡️ Refrescando la página para reintentar.")
                 if auto_refresh:
+                    print("➡️ Refrescando la página para reintentar.")
                     await driver.refresh()
+                    await asyncio.sleep(2)
                 else:
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(2)
             
     print(f"🔴 No se pudo hacer click en el elemento después de {max_retries} intentos.")
-    
     raise maxRetries(f"Se agotó el número de intentos para hacer click en '{element_description}'")
 
 
@@ -104,15 +321,15 @@ async def send_keys_verificado(driver, by, element, input_text, element_descript
             else:
                 print("🟡 Problema al ingresar el texto.")
                 if intento < max_retries - 1:
-                    print("➡️ Refrescando la página para reintentar.")
                     if auto_refresh:
+                        print("➡️ Refrescando la página para reintentar.")
                         await driver.refresh()
                 
         except Exception as e:
             print(f"🔴 Ocurrió un error inesperado: {e}")
             if intento < max_retries - 1:
-                print("➡️ Refrescando la página para reintentar.")
                 if auto_refresh:
+                    print("➡️ Refrescando la página para reintentar.")
                     await driver.refresh()
 
     print(f"🔴 No se pudo avanzar en el formulario después de {max_retries} intentos.")
@@ -121,9 +338,9 @@ async def send_keys_verificado(driver, by, element, input_text, element_descript
 
 
 # -----------------------------------------------------------------------------
-# FUNCIÓN para hacer click y verificar que un elemento deje de existir
+# FUNCIÓN para hacer click y verificar que un elemento dezaparezca/aparezca
 # -----------------------------------------------------------------------------
-async def click_verificado_elemento(driver, by, element, by_verifier, verifier_element, element_description='el elemento', click_normal = True, max_retries=3, auto_refresh = True):
+async def click_verificado_elemento(driver, by, element, by_verifier, verifier_element, element_description='el elemento', click_normal = True, elemento_actual = True, max_retries=3, auto_refresh = True):
     
     for intento in range(max_retries):
         if intento > 0:
@@ -140,25 +357,44 @@ async def click_verificado_elemento(driver, by, element, by_verifier, verifier_e
 
             await asyncio.sleep(1) 
 
-            elemento_verificador = await driver.find_elements(by_verifier, verifier_element, timeout=10)
+            elemento_verificador = await driver.find_elements(by_verifier, verifier_element, timeout=20)
 
-            if len(elemento_verificador) == 0:
-                # Lista vacía = no se encontró el elemento verificador = ¡ÉXITO!
-                print("🟢 Click verificado.")
-                return True
+            if elemento_actual:
+                if len(elemento_verificador) == 0:
+                    # Lista vacía = no se encontró el elemento verificador = ¡ÉXITO!
+                    print("🟢 Click verificado.")
+                    return True
+                else:
+                    # La lista tiene elementos = sigue presente el elemento verificador = FALLO.
+                    print("🟡 El proceso no avanzó.")
+                    if intento < max_retries - 1:
+                        if auto_refresh:
+                            print("➡️ Refrescando la página para reintentar.")
+                            await driver.refresh()
+                        else:
+                            await asyncio.sleep(2)
             else:
-                # La lista tiene elementos = sigue presente el elemento verificador = FALLO.
-                print("🟡 El proceso no avanzó.")
-                if intento < max_retries - 1:
-                    print("➡️ Refrescando la página para reintentar.")
-                    if auto_refresh:
-                        await driver.refresh()
+                if len(elemento_verificador) == 0:
+                    # Lista vacía = no se encontró el elemento verificador = FALLO.
+                    print("🟡 El proceso no avanzó.")
+                    if intento < max_retries - 1:
+                        if auto_refresh:
+                            print("➡️ Refrescando la página para reintentar.")
+                            await driver.refresh()
+                        else:
+                            await asyncio.sleep(2)
+                else:
+                    # La lista tiene elementos = apareció el elemento verificador = ¡ÉXITO!
+                    print("🟢 Click verificado.")
+                    return True
+                    
+
 
         except Exception as e:
             print(f"🔴 Ocurrió un error inesperado': {e}")
             if intento < max_retries - 1:
-                print("➡️ Refrescando la página para reintentar.")
                 if auto_refresh:
+                    print("➡️ Refrescando la página para reintentar.")
                     await driver.refresh()
                 
 
@@ -172,53 +408,47 @@ async def click_verificado_elemento(driver, by, element, by_verifier, verifier_e
 # -----------------------------------------------------------------------------
 # FUNCIÓN para hacer click y verificar que cambie la URL
 # -----------------------------------------------------------------------------
-async def click_verificado_url(driver, by, element, target_url = '', element_description='el elemento', max_retries=4, auto_refresh = True):
+async def click_verificado_url(driver, by, element, target_url = '', element_description='el elemento', max_retries=2, auto_refresh = True):
     
     for intento in range(max_retries):
-        if intento > 0:
-            print(f"🔄 Intento {intento + 1} de {max_retries}...")
         try:
             current_url = await driver.current_url
             if current_url == target_url:
                 return True
 
-            if intento < 3:
+            if intento < (max_retries - 1):
+                if intento > 0:
+                    print(f"🔄 Intento {intento + 1} de {max_retries}...")
                 elemento = await driver.find_element(by, element, timeout=10)
                 await elemento.click(move_to=True)
                 print(f"🟢 Click en '{element_description}'.")
             else:
                 print("⏳ Accediendo manualmente a la url target.")
                 await driver.get(target_url, wait_load=True)
+                return True # Con esto ya está verificado el click.
+            
+            # await asyncio.sleep(1)
 
-            await asyncio.sleep(1)
-
-            current_url = await driver.current_url
-            if current_url == target_url:
-                return True
+            # current_url = await driver.current_url
+            # if current_url == target_url:
+            #     return True
             
             print("🟡 La URL no cambió en este intento.")
             print(f"🔍 URL después del clic: {current_url}")
 
             if intento < max_retries - 1:
-                print("➡️ Refrescando la página para reintentar.")
                 if auto_refresh:
+                    print("➡️ Refrescando la página para reintentar.")
                     await driver.refresh()
 
         except Exception as e:
             print(f"🔴 Ocurrió un error en el intento {intento + 1} al interactuar con '{element_description}': {e}")
             if intento < max_retries - 1:
-                print("➡️ Refrescando la página para reintentar.")
                 if auto_refresh:
+                    print("➡️ Refrescando la página para reintentar.")
                     await driver.refresh()
     
-    
-                
-
-    print(f"🔴 Se alcanzó el número máximo de reintentos sin éxito para '{element_description}'.")
-
-
-    
-
+    print(f"🔴 Se alcanzó el número máximo de reintentos sin éxito para '{element_description}'.")    
     raise maxRetries(f"Se agotó el número de intentos para hacer click en '{element_description}'")
 
 
