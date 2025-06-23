@@ -7,7 +7,7 @@ from datetime import datetime
 import pandas as pd
 from selenium_driverless.types.by import By
 from selenium_driverless.types.webelement import NoSuchElementException
-from utils import click_verificado_elemento, click_con_reintentos, send_keys_verificado
+from utils import click_verificado_elemento, click_con_reintentos, send_keys_verificado, seleccionar_productos_carro
 from utils import setup_driver, encontrar_mejor_shipping
 from utils import verification_code_email, delete_all_falabella_notifications
 warnings.filterwarnings("ignore", message="got execution_context_id and unique_context=True, defaulting to execution_context_id")
@@ -75,19 +75,7 @@ ACCOUNT_DATA = [{
     "pw": "5F94oRbO0wYkf224bRmz"
 },
 {
-    "user": "performance.test.falabella.1@gmail.com",
-    "pw": "5F94oRbO0wYkf224bRmz"
-},
-{
-    "user": "performance.test.falabella.2@gmail.com",
-    "pw": "5F94oRbO0wYkf224bRmz"
-},
-{
-    "user": "performance.test.falabella.3@gmail.com",
-    "pw": "5F94oRbO0wYkf224bRmz"
-},
-{
-    "user": "performance.test.falabella.4@gmail.com",
+    "user": "PqRsT8uVwXyZ1aBc.0@gmail.com",
     "pw": "5F94oRbO0wYkf224bRmz"
 }
 ]
@@ -97,20 +85,8 @@ EMAIL_DATA = [{
     "pw" : "dyweqhjbqvqfepqf"
 },
 {
-    "mail" : "performance.test.falabella.1@gmail.com",
-    "pw" : "guqzayrjftpiikpl"
-},
-{
-    "mail" : "performance.test.falabella.2@gmail.com",
-    "pw" : "guqzayrjftpiikpl"
-},
-{
-    "mail" : "performance.test.falabella.3@gmail.com",
-    "pw" : "guqzayrjftpiikpl"
-},
-{
-    "mail" : "performance.test.falabella.4@gmail.com",
-    "pw" : "guqzayrjftpiikpl"
+    "mail" : "PqRsT8uVwXyZ1aBc.0@gmail.com",
+    "pw" : "ygjnpzfhcqpppzrg"
 }
 ]
 
@@ -201,7 +177,7 @@ async def run_scraping(product_list: list[str], task_id: int):
         # 🟢 Ingresar código de verificación
         input_field = await tab_driver.find_element(By.ID, "otp-0", timeout=20)
         request_order = 0
-        code = verification_code_email(EMAIL_DATA[task_id]["mail"], EMAIL_DATA[task_id]["pw"], action="read", email_index = request_order)
+        code = verification_code_email(EMAIL_DATA[task_id]["mail"], EMAIL_DATA[task_id]["pw"], action="read", email_index = request_order, retry_delay_seconds=10)
         await input_field.send_keys(code)
 
         # 🟢 Click en continuar.
@@ -209,7 +185,7 @@ async def run_scraping(product_list: list[str], task_id: int):
                                 by=By.CLASS_NAME,
                                 element="new-device-otp-form-module_confirm-button-falabella-enabled__YoPgq",
                                 by_verifier=By.XPATH,
-                                verifier_element="//span[text()='Resumen de la compra']",
+                                verifier_element="//span[contains(text(), 'Datos personales')] | //h1[contains(text(), 'Datos personales')]",
                                 element_description="Continuar",
                                 elemento_actual=False,
                                 auto_refresh=False)
@@ -244,17 +220,18 @@ async def run_scraping(product_list: list[str], task_id: int):
 
             except NoSuchElementException:
                 print("🟢 El carro no está vacío. Procediendo a eliminar productos existentes.")
+
+                seleccionar_productos_carro(driver=tab_driver)
+
                 await click_verificado_elemento(driver=tab_driver,
                                 by=By.XPATH,
                                 element="//button[contains(@data-testid, '-new-design-decrement-button')]",
                                 by_verifier=By.XPATH,
-                                verifier_element="//h2[contains(text(), 'Tu Carro está vacío')]",
+                                verifier_element="//h2[contains(text(), 'Tu Carro está vacío')] | //p[contains(text(),'¡Aprovecha! Tenemos miles de productos en oferta y oportunidades únicas.')] | //button[contains(text(),'Ver ofertas')]",
                                 element_description="Eliminar producto del carro",
                                 elemento_actual=False,
                                 auto_refresh=False,
                                 max_retries=10)
-
-                await asyncio.sleep(2)  # Esperar a que se actualice el carro
 
             # --------------------------------------------------------------------------------------------
 
@@ -357,6 +334,7 @@ async def run_scraping(product_list: list[str], task_id: int):
 
             # 🟢 Acceder a checkout
             print("⏳ Accediendo manualmente a url del checkout.")
+            await asyncio.sleep(2)
             await tab_driver.get('https://www.falabella.com/falabella-cl/checkout/delivery', wait_load=True)
 
             # ----------------------------------------------------------------------------------------------------------------------------------
@@ -378,7 +356,7 @@ async def run_scraping(product_list: list[str], task_id: int):
                                                 elemento_actual=False,
                                                 auto_refresh=False)
 
-                # 🟢 Click en dirección
+                # 🟢 Buscar y marcar Dirección
                 print(f"⏳ Buscando la dirección para: {address['calle']}, {address['numero']}")
 
                 xpath_address_text = f"//span[contains(text(), '{address['calle']}, {address['numero']}')]"
@@ -496,6 +474,7 @@ async def run_scraping(product_list: list[str], task_id: int):
                 except NoSuchElementException:
                     print("❌ ERROR: No se pudo encontrar la sección de 'Envío a domicilio'.")
 
+
                 # Formato promesa ------------------------------------------
                 def formatear_fecha(tupla_fecha, fecha_referencia):
                     dia_str, mes_str = tupla_fecha
@@ -570,6 +549,9 @@ async def run_scraping(product_list: list[str], task_id: int):
 
             # 🟢 Eliminar producto
             print("⏳ Eliminando producto del carro...")
+
+            seleccionar_productos_carro(driver=tab_driver)
+
             await click_verificado_elemento(driver=tab_driver,
                                 by=By.XPATH,
                                 element="//button[contains(@data-testid, '-new-design-decrement-button')]",
@@ -590,6 +572,8 @@ async def run_scraping(product_list: list[str], task_id: int):
             print(f"❌ Ocurrió un error al procesar el producto {product_id}.")
             print(f"Detalles del error: {e}")
             print("---------------------------------------\n")
+            await tab_driver.close()
+            delete_all_falabella_notifications(EMAIL_DATA[task_id]["mail"], EMAIL_DATA[task_id]["pw"])
             continue
 
     # ------------------------------------------------------------------------------------------------------------------------------------
@@ -608,24 +592,27 @@ async def main():
 
     # Instancia global del driver
     driver_global = await setup_driver()
-    print("🚀 Navegador principal iniciado.")
+    await driver_global.close()
+    print("🚀 Driver global iniciado.")
 
     # Procesamiento paralelo
     all_products_data = []
-    concurrent_tasks = 1
+    concurrent_tasks = 2
 
     chunks = [[] for _ in range(concurrent_tasks)]
     for i, product_id in enumerate(product_ids):
         chunks[i % concurrent_tasks].append(product_id)
 
+    tasks = []
 
     for i, chunk in enumerate(chunks):
-        tasks = [run_scraping(chunk, i)]
-        results = await asyncio.gather(*tasks)
+        tasks.append(run_scraping(chunk, i))
 
-        for product_data_list in results:
-            if product_data_list:
-                all_products_data.extend(product_data_list)
+    results = await asyncio.gather(*tasks)
+
+    for product_data_list in results:
+        if product_data_list:
+            all_products_data.extend(product_data_list)
 
     # Guardar resultados en un archivo Excel
     df = pd.DataFrame(all_products_data)

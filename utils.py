@@ -7,12 +7,36 @@ import time
 from datetime import datetime
 from functools import reduce
 import asyncio
+from selenium_driverless.types.webelement import By
 from selenium_driverless.types.webelement import NoSuchElementException
 from selenium_driverless import webdriver
 
 class MaxRetriesException(Exception):
     pass
 
+
+
+# -----------------------------------------------------------------------------
+# FUNCIÓN para marcar todos los items del carro
+# -----------------------------------------------------------------------------
+async def seleccionar_productos_carro(driver):
+    print("⌛ Asegurándose que los productos esten seleccionados.")
+
+    checkbox_elements = await driver.find_elements(By.XPATH, "//label[contains(@data-testid, 'parent-partial-checkout-')]//p[text()='Seleccionar todos']/ancestor::label//span[contains(@class, 'checkbox__control')]")
+    total_checkboxes_found = len(checkbox_elements)
+
+    print(f"🟢 Se encontraron {total_checkboxes_found} checkboxes.")
+
+
+    if total_checkboxes_found > 0:
+        for checkbox_element in checkbox_elements:
+
+            is_checked = await checkbox_element.get_attribute("data-checked") is not None
+
+            if not is_checked:
+                print("🟢 Seleccionando producto.")
+                await checkbox_element.click(move_to=True)
+                await asyncio.sleep(5)
 
 
 # -----------------------------------------------------------------------------
@@ -182,7 +206,7 @@ async def setup_driver():
         "AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/125.0.0.0 Safari/537.36"
     )
-    options.add_argument("--headless")
+    # options.add_argument("--headless")
     options.add_argument(f"--user-agent={user_agent}")
     options.add_argument("--window-size=1920,1080")
     options.add_argument("--start-maximized")
