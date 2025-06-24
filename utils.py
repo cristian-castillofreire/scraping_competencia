@@ -17,32 +17,109 @@ class MaxRetriesException(Exception):
 
 
 # -----------------------------------------------------------------------------
+# FUNCIÓN para eliminar producto del carrito
+# -----------------------------------------------------------------------------
+async def delete_cart_item(driver, max_retries = 10):
+
+    for intento in range(max_retries):
+        if intento > 0:
+            print(f"🔄 Intento {intento + 1} de {max_retries}...")
+        try:
+            try:
+                item_cart_menu = await driver.find_element(By.CSS_SELECTOR, '[data-testid*="-menu-button"]')
+                await item_cart_menu.click(move_to=True)
+
+                delete_item_btn = await driver.find_element(By.CSS_SELECTOR, '[data-testid$="-delete-button"]')
+                await delete_item_btn.click(move_to=True)
+
+                print("🟢 Eliminando producto del carro.")
+            except Exception:
+                pass
+
+            await asyncio.sleep(1)
+
+            elemento_verificador = await driver.find_elements(By.XPATH, "//h2[contains(text(), 'Tu Carro está vacío')] | //p[contains(text(),'¡Aprovecha! Tenemos miles de productos en oferta y oportunidades únicas.')] | //button[contains(text(),'Ver ofertas')]", timeout=20)
+
+
+            if len(elemento_verificador) == 0:
+                # Lista vacía = no se encontró el elemento verificador = FALLO.
+                print("🟡 El proceso no avanzó.")
+                if intento < max_retries - 1:
+                    await asyncio.sleep(2)
+            else:
+                # La lista tiene elementos = apareció el elemento verificador = ¡ÉXITO!
+                print("🟢 Se vació el carrito de compras")
+                return True
+
+
+
+        except Exception as e:
+            print(f"🔴 Ocurrió un error inesperado: {e}")
+
+    print(f"🔴 No se pudo avanzar después de {max_retries} intentos.")
+    raise MaxRetriesException("Se agotó el número de intentos para limpiar el carro.")
+
+
+
+
+
+
+# -----------------------------------------------------------------------------
 # FUNCIÓN para marcar todos los items del carro
 # -----------------------------------------------------------------------------
 async def seleccionar_productos_carro(driver):
     print("⌛ Asegurándose que los productos esten seleccionados.")
 
-    checkbox_elements = await driver.find_elements(By.XPATH, "//label[contains(@data-testid, 'parent-partial-checkout-')]//p[text()='Seleccionar todos']/ancestor::label//span[contains(@class, 'checkbox__control')]")
-    total_checkboxes_found = len(checkbox_elements)
+    max_retries = 10
+    all_checked_after_attempt = True
 
-    print(f"🟢 Se encontraron {total_checkboxes_found} checkboxes.")
+    try:
+        for attempt in range(max_retries):
+
+            checkbox_elements = await driver.find_elements(By.XPATH, "//label[contains(@data-testid, 'parent-partial-checkout-')]//p[text()='Seleccionar todos']/ancestor::label//span[contains(@class, 'checkbox__control')]")
+            total_checkboxes_found = len(checkbox_elements)
 
 
-    if total_checkboxes_found > 0:
-        for checkbox_element in checkbox_elements:
+            if total_checkboxes_found > 0:
 
-            is_checked = await checkbox_element.get_attribute("data-checked") is not None
+                print(f"🟢 Se encontraron {total_checkboxes_found} checkboxes.")
 
-            if not is_checked:
-                print("🟢 Seleccionando producto.")
-                await checkbox_element.click(move_to=True)
-                await asyncio.sleep(5)
+                for checkbox_element in checkbox_elements:
+
+                    is_checked = 'data-checked' in await checkbox_element.get_attribute('outerHTML')
+
+                    if not is_checked:
+                        print("🟢 Seleccionando producto.")
+                        await checkbox_element.click(move_to=True)
+                        await asyncio.sleep(5)
+
+                # Verificar selecciones
+                recheck_checkbox_elements = await driver.find_elements(By.XPATH, "//label[contains(@data-testid, 'parent-partial-checkout-')]//p[text()='Seleccionar todos']/ancestor::label//span[contains(@class, 'checkbox__control')]")
+                all_checked_after_attempt = True
+
+                for recheck_element in recheck_checkbox_elements:
+                    if 'data-checked' not in await recheck_element.get_attribute('outerHTML'):
+                        all_checked_after_attempt = False
+                        break # Found an unchecked one, no need to check further
+
+                if all_checked_after_attempt:
+                    print("🟢 Todos los productos del carro se encuentran seleccionados.")
+                    return # Exit if all are checked
+
+                print(f"🟡 No todos los checkboxes están seleccionados después del intento {attempt + 1}. Reintentando...")
+                await asyncio.sleep(2)
+
+        if not all_checked_after_attempt:
+            print("❌ Se agotaron los intentos y no todos los checkboxes pudieron ser seleccionados.")
+
+    except NoSuchElementException:
+        pass
 
 
 # -----------------------------------------------------------------------------
 # FUNCIÓN para leer código de verificación A2F desde Gmail
 # -----------------------------------------------------------------------------
-def verification_code_email(my_email, my_password, imap_server="imap.gmail.com", action="read", email_index=0, max_retries=5, retry_delay_seconds=5):
+def verification_code_email(my_email, my_password, imap_server="imap.gmail.com", action="read", email_index=0, max_retries=10, retry_delay_seconds=10):
 
     def extract_verification_code(body):
         phrase = "Si fuiste tú, ingresa este código verificador:"
@@ -57,7 +134,7 @@ def verification_code_email(my_email, my_password, imap_server="imap.gmail.com",
     for attempt in range(max_retries):
 
         if attempt == 0:
-            time.sleep(5)
+            time.sleep(10)
 
         print(f"➡️ Intento {attempt + 1} de {max_retries} para obtener código A2F.")
         mail = None
@@ -151,17 +228,16 @@ def delete_all_falabella_notifications(my_email, my_password, imap_server="imap.
     target_sender = "notificaciones@mail.falabella.com"
     mail = None
     try:
-        print(f"Connecting to IMAP server '{imap_server}' for {my_email} to delete emails from {target_sender}...")
+        print(f"Conectando a server IMAP '{imap_server}' para {my_email} para eliminar correos de {target_sender}...")
         mail = imaplib.IMAP4_SSL(imap_server)
         mail.login(my_email, my_password)
         mail.select("inbox") # Select the inbox folder
 
-        print(f"Searching for emails from '{target_sender}'...")
         status, messages = mail.search(None, 'FROM', f'"{target_sender}"') # pylint: disable=W0612
         email_ids = messages[0].split()
 
         if email_ids:
-            print(f"Found {len(email_ids)} emails from '{target_sender}'. Deleting them now...")
+            print(f"Se encontraro {len(email_ids)} emails de '{target_sender}'. Eliminandolos ahora...")
             deleted_count = 0
             for uid in email_ids:
                 try:
@@ -173,10 +249,10 @@ def delete_all_falabella_notifications(my_email, my_password, imap_server="imap.
 
             # Permanently delete marked emails
             mail.expunge()
-            print(f"Successfully deleted {deleted_count} emails from '{target_sender}'.")
+            print(f"Se eliminaron {deleted_count} emails de '{target_sender}'.")
             return True
         else:
-            print(f"No emails found from '{target_sender}'. Nothing to delete.")
+            print(f"No se encontraron emails de '{target_sender}'. Nada para eliminar.")
             return True
 
     except imaplib.IMAP4.error as e:
@@ -190,7 +266,6 @@ def delete_all_falabella_notifications(my_email, my_password, imap_server="imap.
         if mail:
             try:
                 mail.logout()
-                print("Disconnected from IMAP server.")
             except Exception as e:
                 print(f"Error during logout: {e}")
 
@@ -206,7 +281,7 @@ async def setup_driver():
         "AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/125.0.0.0 Safari/537.36"
     )
-    # options.add_argument("--headless")
+    options.add_argument("--headless")
     options.add_argument(f"--user-agent={user_agent}")
     options.add_argument("--window-size=1920,1080")
     options.add_argument("--start-maximized")
@@ -541,3 +616,50 @@ def encontrar_mejor_shipping(opciones_de_envio: list) -> dict:
         return opciones_de_envio[0]
 
     return reduce(_comparar_dos_opciones, opciones_de_envio)
+
+# -----------------------------------------------------------------------------
+# FUNCIÓN para formato de promesa
+# -----------------------------------------------------------------------------
+meses = {
+    'ene': 1, 'feb': 2, 'mar': 3, 'abr': 4, 'may': 5, 'jun': 6,
+    'jul': 7, 'ago': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dic': 12
+}
+
+def formatear_fecha(tupla_fecha, fecha_referencia):
+    dia_str, mes_str = tupla_fecha
+    dia = int(dia_str)
+    mes = meses.get(mes_str)
+    if not mes:
+        return ""
+
+    ano = fecha_referencia.year
+    if mes < fecha_referencia.month:
+        ano += 1
+
+    try:
+        return datetime(ano, mes, dia).strftime("%d/%m/%Y")
+    except ValueError:
+        return ""
+
+async def formato_promesa(opciones_de_envio, fecha_hoy):
+    for opcion in opciones_de_envio:
+        promesa_texto = opcion.get("promesa_entrega", "")
+
+        opcion["specificDate"] = ""
+        opcion["dateRangeLB"] = ""
+        opcion["dateRangeUB"] = ""
+
+        if "entre" in promesa_texto.lower():
+            dias = re.findall(r'\b(\d{1,2})\b', promesa_texto)
+            meses_encontrados = re.findall(r'de\s+([a-z]{3})', promesa_texto)
+            if len(dias) == 2 and len(meses_encontrados) == 1:
+                mes_comun = meses_encontrados[0]
+                opcion["dateRangeLB"] = formatear_fecha((dias[0], mes_comun), fecha_hoy)
+                opcion["dateRangeUB"] = formatear_fecha((dias[1], mes_comun), fecha_hoy)
+            elif len(dias) == 2 and len(meses_encontrados) == 2:
+                opcion["dateRangeLB"] = formatear_fecha((dias[0], meses_encontrados[0]), fecha_hoy)
+                opcion["dateRangeUB"] = formatear_fecha((dias[1], meses_encontrados[1]), fecha_hoy)
+        else:
+            match_fecha_especifica = re.search(r"(\d{1,2})\s+de\s+([a-z]{3})", promesa_texto)
+            if match_fecha_especifica:
+                opcion["specificDate"] = formatear_fecha(match_fecha_especifica.groups(), fecha_hoy)
