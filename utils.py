@@ -119,7 +119,7 @@ async def seleccionar_productos_carro(driver):
 # -----------------------------------------------------------------------------
 # FUNCIÓN para leer código de verificación A2F desde Gmail
 # -----------------------------------------------------------------------------
-def verification_code_email(my_email, my_password, imap_server="imap.gmail.com", action="read", email_index=0, max_retries=10, retry_delay_seconds=10):
+def verification_code_email(my_email, my_password, imap_server="imap.gmail.com", action="read", email_index=-1, max_retries=10, retry_delay_seconds=10):
 
     def extract_verification_code(body):
         phrase = "Si fuiste tú, ingresa este código verificador:"
@@ -130,6 +130,7 @@ def verification_code_email(my_email, my_password, imap_server="imap.gmail.com",
         return None
 
     target_sender = "notificaciones@mail.falabella.com"
+    search_phrase = "verificador"
 
     for attempt in range(max_retries):
 
@@ -143,7 +144,8 @@ def verification_code_email(my_email, my_password, imap_server="imap.gmail.com",
             mail.login(my_email, my_password)
             mail.select("inbox")
 
-            status, messages = mail.search(None, 'FROM', f'"{target_sender}"') # pylint: disable=W0612
+            search_query = f'(FROM "{target_sender}" BODY "{search_phrase}")'
+            status, messages = mail.search(None, search_query) # pylint: disable=W0612 # pylint: disable=W0612
             email_ids = messages[0].split()
 
             if email_ids:

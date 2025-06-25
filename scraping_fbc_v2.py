@@ -13,8 +13,8 @@ warnings.filterwarnings("ignore", message="got execution_context_id and unique_c
 
 # Lista de productos
 # product_ids = ['2521167', '2473515', '2537673', '2558268', '2565136', '2675502', '2700993', '2701014', '2701754', '2701755', '2702948', '2707002', '2707003', '2707301', '2708797', '2712096', '2759321', '2780334', '2780336', '2789831', '2798641', '2819857', '2820362', '2827037', '2827040', '2865616', '2865619', '2892131', '2908801', '2915441', '2985129', '2998040', '3003862', '3031421', '3031463', '3031815', '3038575', '3038579', '3038580', '3066595', '3111527', '3111992', '3122360', '3135729', '3135730', '3135731', '3136861', '3166646', '3265384', '3287877', '3287878', '3305978', '3306724', '3332645', '3370076', '3370168', '3391399', '3391400', '3391401', '3397897', '3435418', '3447807', '3448861', '3466711', '3466712', '3466713', '3477988', '3480446', '3480621', '3491456', '3491457', '3512125', '3524974', '3526765', '3550468', '3550484', '3550486', '3562061', '3604978', '3617925', '3647578', '3647636', '3651417', '3653333', '3668020', '3678720', '3685373', '3693050', '3695141', '3695143', '3695143', '3695146', '3741606', '3741613', '3793334', '3794880', '3839491', '3839492', '3842992', '3843025', '3843026', '3843179', '3860939', '3860940', '3869308', '3892545', '3892548', '3903121', '3904276']
-product_ids = ['2521167', '2473515', '2537673', '2558268', '2565136', '2675502', '2700993', '2701014', '2701754', '2701755', '2702948', '2707002', '2707003', '2707301', '2708797', '2712096', '2759321', '2780334', '2780336', '2789831', '2798641', '2819857', '2820362', '2827037', '2827040', '2865616', '2865619', '2892131', '2908801', '2915441', '2985129', '2998040', '3003862', '3031421', '3031463', '3031815', '3038575', '3038579', '3038580', '3066595']
-# product_ids = ['2521167', '15643401', '2473515', '2537673', '2558268', '2565136', '2675502', '2700993', '2701014', '2701754', '2701755', '2702948']
+# product_ids = ['2521167', '2473515', '2537673', '2558268', '2565136', '2675502', '2700993', '2701014', '2701754', '2701755', '2702948', '2707002', '2707003', '2707301', '2708797', '2712096', '2759321', '2780334', '2780336', '2789831', '2798641', '2819857', '2820362', '2827037', '2827040', '2865616', '2865619', '2892131', '2908801', '2915441', '2985129', '2998040', '3003862', '3031421', '3031463', '3031815', '3038575', '3038579', '3038580', '3066595']
+product_ids = ['2521167', '15643401', '2473515', '2537673', '2558268', '2565136', '2675502', '2700993', '2701014', '2701754', '2701755', '2702948']
 # product_ids = ['15643401', '17187740']
 # product_ids = ['15643401']
 
@@ -78,6 +78,21 @@ ACCOUNT_DATA = [{
     "user": "PqRsT8uVwXyZ1aBc.0@gmail.com",
     "pw": "5F94oRbO0wYkf224bRmz",
     "api" : "ygjnpzfhcqpppzrg"
+},
+{
+    "user": "PqRsT8uVwXyZ1aBc.1@gmail.com",
+    "pw": "5F94oRbO0wYkf224bRmz",
+    "api" : "tkuieidnjcdzyzbp"
+},
+{
+    "user": "PqRsT8uVwXyZ1aBc.2@gmail.com",
+    "pw": "5F94oRbO0wYkf224bRmz",
+    "api" : "xhnckfilplntloje"
+},
+{
+    "user": "PqRsT8uVwXyZ1aBc.3@gmail.com",
+    "pw": "5F94oRbO0wYkf224bRmz",
+    "api" : "eoxcjudonxnkgugi"
 }
 ]
 
@@ -145,19 +160,13 @@ async def run_scraping(product_list: list[str], task_id: int):
                                 auto_refresh=False)
 
         # 🟢 Ingresar código de verificación
-        code = verification_code_email(ACCOUNT_DATA[task_id]["user"], ACCOUNT_DATA[task_id]["api"], action="read", email_index = 0, retry_delay_seconds=10)
+        code = verification_code_email(ACCOUNT_DATA[task_id]["user"], ACCOUNT_DATA[task_id]["api"], action="read", email_index = -1, retry_delay_seconds=10)
         input_field = await tab_driver.find_element(By.ID, "otp-0", timeout=20)
         await input_field.send_keys(code)
 
-        # 🟢 Click en 'Continuar'.
-        await click_verificado_elemento(driver=tab_driver,
-                                by=By.CLASS_NAME,
-                                element="new-device-otp-form-module_confirm-button-falabella-enabled__YoPgq",
-                                by_verifier=By.XPATH,
-                                verifier_element="//span[contains(text(), 'Datos personales')] | //h1[contains(text(), 'Datos personales')]",
-                                element_description="Continuar",
-                                elemento_actual=False,
-                                auto_refresh=False)
+        # 🟢 Click en 'Continuar'.       
+        continuar_a2f = await tab_driver.find_element(By.CLASS_NAME, "new-device-otp-form-module_confirm-button-falabella-enabled__YoPgq", timeout=10)
+        await continuar_a2f.click(move_to=True)
 
         print("🔓🔑 Inicio de sesión con A2F exitoso.")
 
@@ -205,7 +214,7 @@ async def run_scraping(product_list: list[str], task_id: int):
                 print(f"🟢 Página de producto {product_id} cargada.")
 
                 # 🟢 Click en 'Agregar al carro' en (PDP) -----------------------------------------------------------------
-                await click_con_reintentos(driver=tab_driver, by=By.ID, element='add-to-cart-button', element_description='Agregar al carro (PDP)', timeout = 20, max_retries=5, auto_refresh = True)
+                await click_con_reintentos(driver=tab_driver, by=By.ID, element='add-to-cart-button', element_description='Agregar al carro (PDP)', timeout = 20, max_retries=3, auto_refresh = True)
 
             except Exception:
 
@@ -625,7 +634,7 @@ async def main():
 
     # Procesamiento paralelo ------------------------------------------------------------------------------------------------------------------------------
     all_products_data = []
-    concurrent_tasks = 2
+    concurrent_tasks = 5
 
     chunks = [[] for _ in range(concurrent_tasks)]
     for i, product_id in enumerate(product_ids):
