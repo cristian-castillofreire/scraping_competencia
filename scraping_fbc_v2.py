@@ -19,12 +19,7 @@ product_ids = ['2521167', '15643401', '2473515', '2537673', '2558268', '2565136'
 # product_ids = ['15643401']
 
 # Datos cliente
-ADDRESS_DATA = [{
-    "region": "METROPOLITANA DE SANTIAGO",
-    "comuna": "LAS CONDES",
-    "calle": "Yaguero",
-    "numero": "7786"
-},
+ADDRESS_DATA = [
 {
     "region": "ANTOFAGASTA",
     "comuna": "ANTOFAGASTA",
@@ -66,6 +61,12 @@ ADDRESS_DATA = [{
     "comuna": "LA SERENA",
     "calle": "Avenida Balmaceda",
     "numero": "686"
+},
+{
+    "region": "METROPOLITANA DE SANTIAGO",
+    "comuna": "LAS CONDES",
+    "calle": "Yaguero",
+    "numero": "7786"
 }
 ]
 

@@ -283,7 +283,7 @@ async def setup_driver():
         "AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/125.0.0.0 Safari/537.36"
     )
-    options.add_argument("--headless")
+    # options.add_argument("--headless")
     options.add_argument(f"--user-agent={user_agent}")
     options.add_argument("--window-size=1920,1080")
     options.add_argument("--start-maximized")
